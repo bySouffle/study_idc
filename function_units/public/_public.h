@@ -174,30 +174,29 @@ bool GetXMLBuffer(const char *xmlbuffer,const char *fieldname,unsigned int *valu
 bool GetXMLBuffer(const char *xmlbuffer,const char *fieldname,long *value);
 bool GetXMLBuffer(const char *xmlbuffer,const char *fieldname,unsigned long *value);
 bool GetXMLBuffer(const char *xmlbuffer,const char *fieldname,double *value);
-///////////////////////////////////// /////////////////////////////////////
+//  ================================  End  ==========================================
 
-///////////////////////////////////// /////////////////////////////////////
+//  ================================  Start  ==========================================
+
 /*
-  取操作系统的时间。
-  stime：用于存放获取到的时间字符串。
-  timetvl：时间的偏移量，单位：秒，0是缺省值，表示当前时间，30表示当前时间30秒之后的时间点，-30表示当前时间30秒之前的时间点。
-  fmt：输出时间的格式，fmt每部分的含义：yyyy-年份；mm-月份；dd-日期；hh24-小时；mi-分钟；ss-秒，
-  缺省是"yyyy-mm-dd hh24:mi:ss"，目前支持以下格式：
-  "yyyy-mm-dd hh24:mi:ss"
-  "yyyymmddhh24miss"
-  "yyyy-mm-dd"
-  "yyyymmdd"
-  "hh24:mi:ss"
-  "hh24miss"
-  "hh24:mi"
-  "hh24mi"
-  "hh24"
-  "mi"
-  注意：
-    1）小时的表示方法是hh24，不是hh，这么做的目的是为了保持与数据库的时间表示方法一致；
-    2）以上列出了常用的时间格式，如果不能满足你应用开发的需求，请修改源代码timetostr函数增加更多的格式支持；
-    3）调用函数的时候，如果fmt与上述格式都匹配，stime的内容将为空。
-    4）时间的年份是四位，其它的可能是一位和两位，如果不足两位，在前面补0。
+ 取操作系统的时间，并把整数表示的时间转换为字符串表示的格式。
+ stime：用于存放获取到的时间字符串。
+ timetvl：时间的偏移量，单位：秒，0是缺省值，表示当前时间，30表示当前时间30秒之后的时间点，-30表示当前时间30秒之前的时间点。
+ fmt：//! 输出时间的格式，缺省是"yyyy-mm-dd hh24:mi:ss"，目前支持以下格式：
+ "yyyy-mm-dd hh24:mi:ss"，此格式是缺省格式。
+ "yyyymmddhh24miss"
+ "yyyy-mm-dd"
+ "yyyymmdd"
+ "hh24:mi:ss"
+ "hh24miss"
+ "hh24:mi"
+ "hh24mi"
+ "hh24"
+ "mi"
+ 注意：
+   1）小时的表示方法是hh24，不是hh，这么做的目的是为了保持与数据库的时间表示方法一致；
+   2）以上列出了常用的时间格式，如果不能满足你应用开发的需求，请修改源代码增加更多的格式支持；
+   3）调用函数的时候，如果fmt与上述格式都匹配，stime的内容将为空。
 */
 void LocalTime(char *stime,const char *fmt=0,const int timetvl=0);
 
