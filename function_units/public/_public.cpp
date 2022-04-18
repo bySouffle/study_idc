@@ -1717,16 +1717,16 @@ bool RENAME(const char *srcfilename,const char *dstfilename,const int times)
 
 CTcpClient::CTcpClient()
 {
-  m_connfd=-1;
+  m_conn_fd=-1;
   memset(m_ip,0,sizeof(m_ip));
   m_port=0;
-  m_btimeout=false;
+  m_b_timeout=false;
 }
 
 bool CTcpClient::ConnectToServer(const char *ip,const int port)
 {
   // 如果已连接到服务端，则断开，这种处理方法没有特别的原因，不要纠结。
-  if (m_connfd!=-1) { close(m_connfd); m_connfd=-1; }
+  if (m_conn_fd!=-1) { close(m_conn_fd); m_conn_fd=-1; }
 
   // 忽略SIGPIPE信号，防止程序异常退出。
   // 如果send到一个disconnected socket上，内核就会发出SIGPIPE信号。这个信号
@@ -1740,11 +1740,11 @@ bool CTcpClient::ConnectToServer(const char *ip,const int port)
   struct hostent* h;
   struct sockaddr_in servaddr;
 
-  if ( (m_connfd = socket(AF_INET,SOCK_STREAM,0) ) < 0) return false;
+  if ( (m_conn_fd = socket(AF_INET,SOCK_STREAM,0) ) < 0) return false;
 
   if ( !(h = gethostbyname(m_ip)) )
   {
-    close(m_connfd);  m_connfd=-1; return false;
+    close(m_conn_fd);  m_conn_fd=-1; return false;
   }
 
   memset(&servaddr,0,sizeof(servaddr));
@@ -1752,9 +1752,9 @@ bool CTcpClient::ConnectToServer(const char *ip,const int port)
   servaddr.sin_port = htons(m_port);  // 指定服务端的通讯端口
   memcpy(&servaddr.sin_addr,h->h_addr,h->h_length);
 
-  if (connect(m_connfd, (struct sockaddr *)&servaddr,sizeof(servaddr)) != 0)
+  if (connect(m_conn_fd, (struct sockaddr *)&servaddr,sizeof(servaddr)) != 0)
   {
-    close(m_connfd);  m_connfd=-1; return false;
+    close(m_conn_fd);  m_conn_fd=-1; return false;
   }
 
   return true;
@@ -1766,46 +1766,46 @@ bool CTcpClient::ConnectToServer(const char *ip,const int port)
 // 返回值：true-成功；false-失败，失败有两种情况：1）等待超时，成员变量m_btimeout的值被设置为true；2）socket连接已不可用。
 bool CTcpClient::Read(char *buffer,const int itimeout)
 {
-  if (m_connfd==-1) return false;
+  if (m_conn_fd==-1) return false;
 
   // 如果itimeout>0，表示需要等待itimeout秒，如果itimeout秒后还没有数据到达，返回false。
   if (itimeout>0)
   {
     struct pollfd fds;
-    fds.fd=m_connfd;
+    fds.fd=m_conn_fd;
     fds.events=POLLIN;
     int iret;
-    m_btimeout=false;
+    m_b_timeout=false;
     if ( (iret=poll(&fds,1,itimeout*1000)) <= 0 )
     {
-      if (iret==0) m_btimeout = true;
+      if (iret==0) m_b_timeout = true;
       return false;
     }
   }
 
-  m_buflen = 0;
-  return (TcpRead(m_connfd,buffer,&m_buflen));
+  m_buff_len = 0;
+  return (TcpRead(m_conn_fd,buffer,&m_buff_len));
 }
 
 bool CTcpClient::Write(const char *buffer,const int ibuflen)
 {
-  if (m_connfd==-1) return false;
+  if (m_conn_fd==-1) return false;
 
   int ilen=ibuflen;
 
   if (ibuflen==0) ilen=strlen(buffer);
 
-  return(TcpWrite(m_connfd,buffer,ilen));
+  return(TcpWrite(m_conn_fd,buffer,ilen));
 }
 
 void CTcpClient::Close()
 {
-  if (m_connfd > 0) close(m_connfd);
+  if (m_conn_fd > 0) close(m_conn_fd);
 
-  m_connfd=-1;
+  m_conn_fd=-1;
   memset(m_ip,0,sizeof(m_ip));
   m_port=0;
-  m_btimeout=false;
+  m_b_timeout=false;
 }
 
 CTcpClient::~CTcpClient()
@@ -1815,18 +1815,18 @@ CTcpClient::~CTcpClient()
 
 CTcpServer::CTcpServer()
 {
-  m_listenfd=-1;
-  m_connfd=-1;
+  m_listen_fd=-1;
+  m_conn_fd=-1;
   m_socklen=0;
-  m_btimeout=false;
+  m_b_timeout=false;
 }
 
 bool CTcpServer::InitServer(const unsigned int port,const int backlog)
 {
   // 如果服务端的socket>0，关掉它，这种处理方法没有特别的原因，不要纠结。
-  if (m_listenfd > 0) { close(m_listenfd); m_listenfd=-1; }
+  if (m_listen_fd > 0) { close(m_listen_fd); m_listen_fd=-1; }
 
-  if ( (m_listenfd = socket(AF_INET,SOCK_STREAM,0))<=0) return false;
+  if ( (m_listen_fd = socket(AF_INET,SOCK_STREAM,0))<=0) return false;
 
   // 忽略SIGPIPE信号，防止程序异常退出。
   signal(SIGPIPE,SIG_IGN);
@@ -1835,18 +1835,18 @@ bool CTcpServer::InitServer(const unsigned int port,const int backlog)
   // 否则bind()可能会不成功，报：Address already in use。
   //char opt = 1; unsigned int len = sizeof(opt);
   int opt = 1; unsigned int len = sizeof(opt);
-  setsockopt(m_listenfd,SOL_SOCKET,SO_REUSEADDR,&opt,len);
+  setsockopt(m_listen_fd,SOL_SOCKET,SO_REUSEADDR,&opt,len);
 
-  memset(&m_servaddr,0,sizeof(m_servaddr));
-  m_servaddr.sin_family = AF_INET;
-  m_servaddr.sin_addr.s_addr = htonl(INADDR_ANY);   // 任意ip地址。
-  m_servaddr.sin_port = htons(port);
-  if (bind(m_listenfd,(struct sockaddr *)&m_servaddr,sizeof(m_servaddr)) != 0 )
+  memset(&m_serv_addr,0,sizeof(m_serv_addr));
+  m_serv_addr.sin_family = AF_INET;
+  m_serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);   // 任意ip地址。
+  m_serv_addr.sin_port = htons(port);
+  if (bind(m_listen_fd,(struct sockaddr *)&m_serv_addr,sizeof(m_serv_addr)) != 0 )
   {
     CloseListen(); return false;
   }
 
-  if (listen(m_listenfd,backlog) != 0 )
+  if (listen(m_listen_fd,backlog) != 0 )
   {
     CloseListen(); return false;
   }
@@ -1856,11 +1856,11 @@ bool CTcpServer::InitServer(const unsigned int port,const int backlog)
 
 bool CTcpServer::Accept()
 {
-  if (m_listenfd==-1) return false;
+  if (m_listen_fd==-1) return false;
 
   m_socklen = sizeof(struct sockaddr_in);
 
-  if ((m_connfd=accept(m_listenfd,(struct sockaddr *)&m_clientaddr,(socklen_t*)&m_socklen)) < 0)
+  if ((m_conn_fd=accept(m_listen_fd,(struct sockaddr *)&m_client_addr,(socklen_t*)&m_socklen)) < 0)
       return false;
 
   return true;
@@ -1868,55 +1868,55 @@ bool CTcpServer::Accept()
 
 char *CTcpServer::GetIP()
 {
-  return(inet_ntoa(m_clientaddr.sin_addr));
+  return(inet_ntoa(m_client_addr.sin_addr));
 }
 
 bool CTcpServer::Read(char *buffer,const int itimeout)
 {
-  if (m_connfd==-1) return false;
+  if (m_conn_fd==-1) return false;
 
   // 如果itimeout>0，表示需要等待itimeout秒，如果itimeout秒后还没有数据到达，返回false。
   if (itimeout>0)
   {
     struct pollfd fds;
-    fds.fd=m_connfd;
+    fds.fd=m_conn_fd;
     fds.events=POLLIN;
-    m_btimeout=false;
+    m_b_timeout=false;
     int iret;
     if ( (iret=poll(&fds,1,itimeout*1000)) <= 0 )
     {
-      if (iret==0) m_btimeout = true;
+      if (iret==0) m_b_timeout = true;
       return false;
     }
   }
 
-  m_buflen = 0;
-  return(TcpRead(m_connfd,buffer,&m_buflen));
+  m_buff_len = 0;
+  return(TcpRead(m_conn_fd,buffer,&m_buff_len));
 }
 
 bool CTcpServer::Write(const char *buffer,const int ibuflen)
 {
-  if (m_connfd==-1) return false;
+  if (m_conn_fd==-1) return false;
 
   int ilen = ibuflen;
   if (ilen==0) ilen=strlen(buffer);
 
-  return(TcpWrite(m_connfd,buffer,ilen));
+  return(TcpWrite(m_conn_fd,buffer,ilen));
 }
 
 void CTcpServer::CloseListen()
 {
-  if (m_listenfd > 0)
+  if (m_listen_fd > 0)
   {
-    close(m_listenfd); m_listenfd=-1;
+    close(m_listen_fd); m_listen_fd=-1;
   }
 }
 
 void CTcpServer::CloseClient()
 {
-  if (m_connfd > 0)
+  if (m_conn_fd > 0)
   {
-    close(m_connfd); m_connfd=-1;
+    close(m_conn_fd); m_conn_fd=-1;
   }
 }
 
