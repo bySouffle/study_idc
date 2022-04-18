@@ -7,12 +7,6 @@
 
 #include "_public.h"
 
-// 安全的strcpy函数。
-// dest：目标字符串，不需要初始化，在STRCPY函数中有初始化代码。
-// destlen：目标字符串dest占用内存的大小。
-// src：原字符串。
-// 返回值：目标字符串dest的地址。
-// 注意，超出dest容量的内容将丢弃。
 char *STRCPY(char* dest,const size_t destlen,const char* src)
 {
   if (dest==0) return 0;    // 判断空指针。
@@ -26,13 +20,6 @@ char *STRCPY(char* dest,const size_t destlen,const char* src)
   return dest;
 }
 
-// 安全的strncpy函数。
-// dest：目标字符串，不需要初始化，在STRCPY函数中有初始化代码。
-// destlen：目标字符串dest占用内存的大小。
-// src：原字符串。
-// n：待复制的字节数。
-// 返回值：目标字符串dest的地址。
-// 注意，超出dest容量的内容将丢弃。
 char *STRNCPY(char* dest,const size_t destlen,const char* src,size_t n)
 {
   if (dest==0) return 0;    // 判断空指针。
@@ -46,12 +33,6 @@ char *STRNCPY(char* dest,const size_t destlen,const char* src,size_t n)
   return dest;
 }
 
-// 安全的strcat函数。
-// dest：目标字符串，注意，如果dest从未使过，那么需要至少一次初始化。
-// destlen：目标字符串dest占用内存的大小。
-// src：待追加字符串。
-// 返回值：目标字符串dest的地址。
-// 注意，超出dest容量的内容将丢弃。
 char *STRCAT(char* dest,const size_t destlen,const char* src)
 {
   if (dest==0) return 0;    // 判断空指针。
@@ -65,13 +46,6 @@ char *STRCAT(char* dest,const size_t destlen,const char* src)
   return dest;
 }
 
-// 安全的strncat函数。
-// dest：目标字符串，注意，如果dest从未使过，那么需要至少一次初始化。
-// destlen：目标字符串dest占用内存的大小。
-// src：待追加字符串。
-// n：待追加的字节数。
-// 返回值：目标字符串dest的地址。
-// 注意，超出dest容量的内容将丢弃。
 char *STRNCAT(char* dest,const size_t destlen,const char* src,size_t n)
 {
   if (dest==0) return 0;    // 判断空指针。
@@ -85,13 +59,6 @@ char *STRNCAT(char* dest,const size_t destlen,const char* src,size_t n)
   return dest;
 }
 
-// 安全的sprintf函数。
-// 将可变参数(...)按照fmt描述的格式输出到dest字符串中。
-// dest：输出字符串，不需要初始化，在SPRINTF函数中会对它进行初始化。
-// destlen：输出字符串dest占用内存的大小，如果格式化后的字符串内容的长度大于destlen-1，后面的内容将丢弃。
-// fmt：格式控制描述。
-// ...：填充到格式控制描述fmt中的参数。
-// 返回值：格式化后的内容的长度，程序员一般不关心返回值。
 int SPRINTF(char *dest,const size_t destlen,const char *fmt,...)
 {
   if (dest==0) return -1;    // 判断空指针。
@@ -107,14 +74,6 @@ int SPRINTF(char *dest,const size_t destlen,const char *fmt,...)
   return ret;
 }
 
-// 安全的snprintf函数。
-// 将可变参数(...)按照fmt描述的格式输出到dest字符串中。
-// dest：输出字符串，不需要初始化，在SNPRINTF函数中会对它进行初始化。
-// destlen：输出字符串dest占用内存的大小，如果格式化后的字符串内容的长度大于destlen-1，后面的内容将丢弃。
-// n：把格式化后的字符串截取n-1存放到dest中，如果n>destlen，则取destlen-1。
-// fmt：格式控制描述。
-// ...：填充到格式控制描述fmt中的参数。
-// 返回值：格式化后的内容的长度，程序员一般不关心返回值。
 int SNPRINTF(char *dest,const size_t destlen,size_t n,const char *fmt,...)
 {
   if (dest==0) return -1;    // 判断空指针。
@@ -133,9 +92,6 @@ int SNPRINTF(char *dest,const size_t destlen,size_t n,const char *fmt,...)
   return ret;
 }
 
-// 删除字符串左边指定的字符。
-// str：待处理的字符串。
-// chr：需要删除的字符。
 void DeleteLChar(char *str,const char chr)
 {
   if (str == 0) return;
@@ -157,9 +113,6 @@ void DeleteLChar(char *str,const char chr)
   return;
 }
 
-// 删除字符串右边指定的字符。
-// str：待处理的字符串。
-// chr：需要删除的字符。
 void DeleteRChar(char *str,const char chr)
 {
   if (str == 0) return;
@@ -177,17 +130,12 @@ void DeleteRChar(char *str,const char chr)
   }
 }
 
-// 删除字符串左右两边指定的字符。
-// str：待处理的字符串。
-// chr：需要删除的字符。
 void DeleteLRChar(char *str,const char chr)
 {
   DeleteLChar(str,chr);
   DeleteRChar(str,chr);
 }
 
-// 把字符串中的小写字母转换成大写，忽略不是字母的字符。
-// str：待转换的字符串，支持char[]和string两种类型。
 void ToUpper(char *str)
 {
   if (str == 0) return;
@@ -217,8 +165,6 @@ void ToUpper(std::string &str)
   return;
 }
 
-// 把字符串中的大写字母转换成小写，忽略不是字母的字符。
-// str：待转换的字符串，支持char[]和string两种类型。
 void ToLower(char *str)
 {
   if (str == 0) return;
@@ -248,15 +194,6 @@ void ToLower(std::string &str)
   return;
 }
 
-// 字符串替换函数
-// 在字符串str中，如果存在字符串str1，就替换为字符串str2。
-// str：待处理的字符串。
-// str1：旧的内容。
-// str2：新的内容。
-// bloop：是否循环执行替换。
-// 注意：
-// 1、如果str2比str1要长，替换后str会变长，所以必须保证str有足够的长度，否则内存会溢出。
-// 2、如果str2中包函了str1的内容，且bloop为true，存在逻辑错误，将不执行任何替换。
 void UpdateStr(char *str,const char *str1,const char *str2,bool bloop)
 {
   if (str == 0) return;
@@ -299,11 +236,6 @@ void UpdateStr(char *str,const char *str1,const char *str2,bool bloop)
   }
 }
 
-// 从一个字符串中提取出数字的内容，存放到另一个字符串中。
-// src：源字符串。
-// dest：目标字符串。
-// bsigned：是否包括符号（+和-），true-包括；false-不包括。
-// bdot：是否包括小数点的圆点符号，true-包括；false-不包括。
 void PickNumber(const char *src,char *dest,const bool bsigned,const bool bdot)
 {
   if (dest==0) return;    // 判断空指针。
@@ -342,10 +274,6 @@ void PickNumber(const char *src,char *dest,const bool bsigned,const bool bdot)
   dest[iposdst]=0;
 }
 
-// 正则表达式，判断一个字符串是否匹配另一个字符串。
-// str：需要判断的字符串，精确表示的字符串，如文件名"_public.cpp"。
-// rules：匹配规则表达式，用星号"*"表示任意字符串，多个字符串之间用半角的逗号分隔，如"*.h,*.cpp"。
-// 注意，str参数不支持"*"，rules参数支持"*"，函数在判断str是否匹配rules的时候，会忽略字母的大小写。
 bool MatchStr(const std::string &str,const std::string &rules)
 {
   // 如果用于比较的字符是空的，返回false
@@ -412,7 +340,6 @@ CFile::CFile()   // 类的构造函数
   memset(m_filenametmp,0,sizeof(m_filenametmp));
 }
 
-// 关闭文件指针
 void CFile::Close()
 {
   if (m_fp==0) return;    // 判断空指针。
@@ -1052,27 +979,6 @@ void timetostr(const time_t ltime,char *stime,const char *fmt)
   }
 }
 
-
-/*
-  取操作系统的时间，并把整数表示的时间转换为字符串表示的格式。
-  stime：用于存放获取到的时间字符串。
-  timetvl：时间的偏移量，单位：秒，0是缺省值，表示当前时间，30表示当前时间30秒之后的时间点，-30表示当前时间30秒之前的时间点。
-  fmt：输出时间的格式，缺省是"yyyy-mm-dd hh24:mi:ss"，目前支持以下格式：
-  "yyyy-mm-dd hh24:mi:ss"，此格式是缺省格式。
-  "yyyymmddhh24miss"
-  "yyyy-mm-dd"
-  "yyyymmdd"
-  "hh24:mi:ss"
-  "hh24miss"
-  "hh24:mi"
-  "hh24mi"
-  "hh24"
-  "mi"
-  注意：
-    1）小时的表示方法是hh24，不是hh，这么做的目的是为了保持与数据库的时间表示方法一致；
-    2）以上列出了常用的时间格式，如果不能满足你应用开发的需求，请修改源代码增加更多的格式支持；
-    3）调用函数的时候，如果fmt与上述格式都匹配，stime的内容将为空。
-*/
 void LocalTime(char *stime,const char *fmt,const int timetvl)
 {
   if (stime==0) return;    // 判断空指针。
@@ -1115,11 +1021,6 @@ void CLogFile::Close()
   m_bEnBuffer=false;
 }
 
-// 打开日志文件。
-// filename：日志文件名，建议采用绝对路径，如果文件名中的目录不存在，就先创建目录。
-// openmode：日志文件的打开方式，与fopen库函数打开文件的方式相同，缺省值是"a+"。
-// bBackup：是否自动切换，true-切换，false-不切换，在多进程的服务程序中，如果多个进行共用一个日志文件，bBackup必须为false。
-// bEnBuffer：是否启用文件缓冲机制，true-启用，false-不启用，如果启用缓冲区，那么写进日志文件中的内容不会立即写入文件，缺省是不启用。
 bool CLogFile::Open(const char *filename,const char *openmode,bool bBackup,bool bEnBuffer)
 {
   // 如果文件指针是打开的状态，先关闭它。
@@ -1136,9 +1037,6 @@ bool CLogFile::Open(const char *filename,const char *openmode,bool bBackup,bool 
   return true;
 }
 
-// 如果日志文件大于100M，就把当前的日志文件备份成历史日志文件，切换成功后清空当前日志文件的内容。
-// 备份后的文件会在日志文件名后加上日期时间。
-// 注意，在多进程的程序中，日志文件不可切换，多线的程序中，日志文件可以切换。
 bool CLogFile::BackupLogFile()
 {
   if (m_tracefp == 0) return false;
@@ -1166,8 +1064,6 @@ bool CLogFile::BackupLogFile()
   return true;
 }
 
-// 把内容写入日志文件，fmt是可变参数，使用方法与printf库函数相同。
-// Write方法会写入当前的时间，WriteEx方法不写时间。
 bool CLogFile::Write(const char *fmt,...)
 {
   if (m_tracefp == 0) return false;
@@ -1190,8 +1086,6 @@ bool CLogFile::Write(const char *fmt,...)
   return true;
 }
 
-// 把内容写入日志文件，fmt是可变参数，使用方法与printf库函数相同。
-// Write方法会写入当前的时间，WriteEx方法不写时间。
 bool CLogFile::WriteEx(const char *fmt,...)
 {
   if (m_tracefp == 0) return false;
@@ -1287,10 +1181,6 @@ void CloseIOAndSignal(bool bCloseIO)
   }
 }
 
-// 根据绝对路径的文件名或目录名逐级的创建目录。
-// pathorfilename：绝对路径的文件名或目录名。
-// bisfilename：说明pathorfilename的类型，true-pathorfilename是文件名，否则是目录名，缺省值为true。
-// 返回值：true-创建成功，false-创建失败，如果返回失败，原因有大概有三种情况：1）权限不足； 2）pathorfilename参数不是合法的文件名或目录名；3）磁盘空间不足。
 bool MKDIR(const char *filename,bool bisfilename)
 {
   // 检查目录是否存在，如果不存在，逐级创建子目录
@@ -1320,10 +1210,6 @@ bool MKDIR(const char *filename,bool bisfilename)
   return true;
 }
 
-// 打开文件。
-// FOPEN函数调用fopen库函数打开文件，如果文件名中包含的目录不存在，就创建目录。
-// FOPEN函数的参数和返回值与fopen函数完全相同。
-// 在应用开发中，用FOPEN函数代替fopen库函数。
 FILE *FOPEN(const char *filename,const char *mode)
 {
   if (MKDIR(filename) == false) return 0;
@@ -1331,9 +1217,6 @@ FILE *FOPEN(const char *filename,const char *mode)
   return fopen(filename,mode);
 }
 
-// 获取文件的大小。
-// filename：待获取的文件名，建议采用绝对路径的文件名。
-// 返回值：如果文件不存在或没有访问权限，返回-1，成功返回文件的大小，单位是字节。
 int FileSize(const char *filename)
 {
   struct stat st_filestat;
@@ -1343,10 +1226,6 @@ int FileSize(const char *filename)
   return st_filestat.st_size;
 }
 
-// 重置文件的修改时间属性。
-// filename：待重置的文件名，建议采用绝对路径的文件名。
-// stime：字符串表示的时间，格式不限，但一定要包括yyyymmddhh24miss，一个都不能少。
-// 返回值：true-成功；false-失败，失败的原因保存在errno中。
 bool UTime(const char *filename,const char *mtime)
 {
   struct utimbuf stutimbuf;
@@ -1358,9 +1237,6 @@ bool UTime(const char *filename,const char *mtime)
   return true;
 }
 
-// 把字符串表示的时间转换为整数表示的时间。
-// stime：字符串表示的时间，格式不限，但一定要包括yyyymmddhh24miss，一个都不能少。
-// 返回值：整数表示的时间，如果stime的格式不正确，返回-1。
 time_t strtotime(const char *stime)
 {
   char strtime[21],yyyy[5],mm[3],dd[3],hh[3],mi[3],ss[3];
@@ -1396,13 +1272,6 @@ time_t strtotime(const char *stime)
   return mktime(&time_str);
 }
 
-// 把字符串表示的时间加上一个偏移的秒数后得到一个新的字符串表示的时间。
-// in_stime：输入的字符串格式的时间。
-// out_stime：输出的字符串格式的时间。
-// timetvl：需要偏移的秒数，正数往后偏移，负数往前偏移。
-// fmt：输出字符串时间out_stime的格式，与LocalTime函数的fmt参数相同。
-// 注意：in_stime和out_stime参数可以是同一个变量的地址，如果调用失败，out_stime的内容会清空。
-// 返回值：true-成功，false-失败，如果返回失败，可以认为是in_stime的格式不正确。
 bool AddTime(const char *in_stime,char *out_stime,const int timetvl,const char *fmt)
 {
   if ( (in_stime==0) || (out_stime==0) ) return false;    // 判断空指针。
@@ -1419,11 +1288,6 @@ bool AddTime(const char *in_stime,char *out_stime,const int timetvl,const char *
   return true;
 }
 
-// 获取文件的时间。
-// filename：待获取的文件名，建议采用绝对路径的文件名。
-// mtime：用于存放文件的时间，即stat结构体的st_mtime。
-// fmt：设置时间的输出格式，与LocalTime函数相同，但缺省是"yyyymmddhh24miss"。
-// 返回值：如果文件不存在或没有访问权限，返回false，成功返回true。
 bool FileMTime(const char *filename,char *mtime,const char *fmt)
 {
   // 判断文件是否存在。
@@ -1471,13 +1335,6 @@ void CDir::SetDateFMT(const char *in_DateFMT)
   STRCPY(m_DateFMT,sizeof(m_DateFMT),in_DateFMT);
 }
 
-// 打开目录，获取目录中的文件列表信息，存放于m_vFileName容器中。
-// in_DirName，待打开的目录名。
-// in_MatchStr，待获取文件名的匹配规则，不匹配的文件被忽略。
-// in_MaxCount，获取文件的最大数量，缺省值为10000个。
-// bAndChild，是否打开各级子目录，缺省值为false-不打开子目录。
-// bSort，是否对获取到的文件列表（即m_vFileName容器中的内容）进行排序，缺省值为false-不排序。
-// 返回值：如果in_DirName参数指定的目录不存在，OpenDir方法会创建该目录，如果创建失败，返回false，还有，如果当前用户对in_DirName目录下的子目录没有读取权限也会返回false，其它正常情况下都会返回true。
 bool CDir::OpenDir(const char *in_DirName,const char *in_MatchStr,const unsigned int in_MaxCount,const bool bAndChild,bool bSort)
 {
   m_pos=0;
@@ -1667,12 +1524,6 @@ CDir::~CDir()
   // m_vDirName.clear();
 }
 
-// 删除目录中的文件，类似Linux系统的rm命令。
-// filename：待删除的文件名，建议采用绝对路径的文件名，例如/tmp/root/data.xml。
-// times：执行删除文件的次数，缺省是1，建议不要超过3，从实际应用的经验看来，如果删除文件第1次不成功，再尝试
-// 2次是可以的，更多就意义不大了。还有，如果执行删除失败，usleep(100000)后再重试。
-// 返回值：true-删除成功；false-删除失败，失败的主要原因是权限不足。
-// 在应用开发中，可以用REMOVE函数代替remove库函数。
 bool REMOVE(const char *filename,const int times)
 {
   // 如果文件不存在，直接返回失败
@@ -1688,15 +1539,6 @@ bool REMOVE(const char *filename,const int times)
   return false;
 }
 
-// 把文件重命名，类似Linux系统的mv命令。
-// srcfilename：原文件名，建议采用绝对路径的文件名。
-// dstfilename：目标文件名，建议采用绝对路径的文件名。
-// times：执行重命名文件的次数，缺省是1，建议不要超过3，从实际应用的经验看来，如果重命名文件第1次不成功，再尝
-// 试2次是可以的，更多次就意义不大了。还有，如果执行重命名失败，usleep(100000)后再重试。
-// 返回值：true-重命名成功；false-重命名失败，失败的主要原因是权限不足或磁盘空间不够，如果原文件和目标文件不
-// 在同一个磁盘分区，重命名也可能失败。
-// 注意，在重命名文件之前，会自动创建dstfilename参数中的目录名。
-// 在应用开发中，可以用RENAME函数代替rename库函数。
 bool RENAME(const char *srcfilename,const char *dstfilename,const int times)
 {
   // 如果文件不存在，直接返回失败
@@ -1925,12 +1767,6 @@ CTcpServer::~CTcpServer()
   CloseListen(); CloseClient();
 }
 
-// 接收socket的对端发送过来的数据。
-// sockfd：可用的socket连接。
-// buffer：接收数据缓冲区的地址。
-// ibuflen：本次成功接收数据的字节数。
-// itimeout：接收等待超时的时间，单位：秒，-1-不等待；0-无限等待；>0-等待的秒数。
-// 返回值：true-成功；false-失败，失败有两种情况：1）等待超时；2）socket连接已不可用。
 bool TcpRead(const int sockfd,char *buffer,int *ibuflen,const int itimeout)
 {
   if (sockfd==-1) return false;
@@ -1966,12 +1802,6 @@ bool TcpRead(const int sockfd,char *buffer,int *ibuflen,const int itimeout)
   return true;
 }
 
-// 向socket的对端发送数据。
-// sockfd：可用的socket连接。
-// buffer：待发送数据缓冲区的地址。
-// ibuflen：待发送数据的字节数，如果发送的是ascii字符串，ibuflen填0或字符串的长度，
-//          如果是二进制流数据，ibuflen为二进制数据块的大小。
-// 返回值：true-成功；false-失败，如果失败，表示socket连接已不可用。
 bool TcpWrite(const int sockfd,const char *buffer,const int ibuflen)
 {
   if (sockfd==-1) return false;
@@ -1995,11 +1825,6 @@ bool TcpWrite(const int sockfd,const char *buffer,const int ibuflen)
   return true;
 }
 
-// 从已经准备好的socket中读取数据。
-// sockfd：已经准备好的socket连接。
-// buffer：接收数据缓冲区的地址。
-// n：本次接收数据的字节数。
-// 返回值：成功接收到n字节的数据后返回true，socket连接不可用返回false。
 bool Readn(const int sockfd,char *buffer,const size_t n)
 {
   int nLeft=n;  // 剩余需要读取的字节数。
@@ -2017,11 +1842,6 @@ bool Readn(const int sockfd,char *buffer,const size_t n)
   return true;
 }
 
-// 向已经准备好的socket中写入数据。
-// sockfd：已经准备好的socket连接。
-// buffer：待发送数据缓冲区的地址。
-// n：待发送数据的字节数。
-// 返回值：成功发送完n字节的数据后返回true，socket连接不可用返回false。
 bool Writen(const int sockfd,const char *buffer,const size_t n)
 {
   int nLeft=n;  // 剩余需要写入的字节数。
@@ -2039,15 +1859,6 @@ bool Writen(const int sockfd,const char *buffer,const size_t n)
   return true;
 }
 
-
-// 复制文件，类似Linux系统的cp命令。
-// srcfilename：原文件名，建议采用绝对路径的文件名。
-// dstfilename：目标文件名，建议采用绝对路径的文件名。
-// 返回值：true-复制成功；false-复制失败，失败的主要原因是权限不足或磁盘空间不够。
-// 注意：
-// 1）在复制文件之前，会自动创建dstfilename参数中的目录名。
-// 2）复制文件的过程中，采用临时文件命名的方法，复制完成后再改名为dstfilename，避免中间状态的文件被读取。
-// 3）复制后的文件的时间与原文件相同，这一点与Linux系统cp命令不同。
 bool COPY(const char *srcfilename,const char *dstfilename)
 {
   if (MKDIR(dstfilename) == false) return false;
