@@ -8,12 +8,15 @@ add_subdirectory(googletest-1.10.x)
 #add_subdirectory(ini)
 #add_subdirectory(sql)
 add_subdirectory(function_units/public)
-
+add_subdirectory(function_units/json)
 
 include_directories(ini)
 include_directories(sql)
 include_directories(function_units)
+include_directories(function_units/rapidjson)
 
 add_executable(study_idc main.cpp )
 target_link_libraries(study_idc public_lib)
+target_link_libraries(study_idc json_lib)
+
 add_subdirectory(FunctionTests)

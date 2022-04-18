@@ -8,16 +8,22 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 # google test sources
 include_directories(public_tests)
-
-# test
+include_directories(json_tests)
 
 set(PUBLIC_TEST_HEADER public_tests/test.h  )
 set(PUBLIC_TEST_SOURCE public_tests/test.cpp  )
+set(JSON_TEST_HEADER   )
+set(JSON_TEST_SOURCE json_tests/test.cpp  )
+
+
 
 set(gtest_SOURCE_DIR googletest)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
-add_executable(FunctionTests ${PUBLIC_TEST_HEADER} ${PUBLIC_TEST_SOURCE})
+add_executable(FunctionTests ${PUBLIC_TEST_HEADER} ${PUBLIC_TEST_SOURCE}
+                             ${JSON_TEST_HEADER}   ${JSON_TEST_SOURCE}  )
 
 target_link_libraries(FunctionTests public_lib)
+target_link_libraries(FunctionTests json_lib)
+
 target_link_libraries(FunctionTests gtest gtest_main)
