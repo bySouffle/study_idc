@@ -832,8 +832,8 @@ struct st_procinfo {
 };
 
 #define MAXNUMP     1000    // 最大的进程数量。
-#define SHMKEYP   0x5095    // 共享内存的key。
-#define SEMKEYP   0x5095    // 信号量的key。
+#define SHMKEYP   0x2020    // 共享内存的key。
+#define SEMKEYP   0x2020    // 信号量的key。
 
 // 查看共享内存：  ipcs -m
 // 删除共享内存：  ipcrm -m shmid

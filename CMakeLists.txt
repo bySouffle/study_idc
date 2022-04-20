@@ -10,6 +10,9 @@ add_subdirectory(googletest-1.10.x)
 add_subdirectory(function_units/public)
 add_subdirectory(function_units/json)
 
+add_subdirectory(exec_test)
+
+
 include_directories(ini)
 include_directories(sql)
 include_directories(function_units)
