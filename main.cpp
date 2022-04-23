@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     printf("Using:   ./study_idc ini_file out_path logfile_ data_fmt [date_time]\n");
     printf("Example: ./study_idc /tmp/study_idc/ini/station_code.ini /tmp/proc_data /tmp/study_idc/log_info.log\n\n");
     printf("         ./study_idc /tmp/study_idc/ini/station_code.ini /tmp/proc_data /tmp/study_idc/log_info.log xml,json,csv\n");
-    printf("         ./study_idc /tmp/study_idc/ini/station_code.ini /tmp/proc_data /tmp/study_idc/log_info.log xml,json,csv 20220423204000\n");
+    printf("         ./study_idc /tmp/study_idc/ini/station_code.ini /tmp/proc_data /tmp/study_idc/log_info.log xml,json,csv 20220423145020\n");
 
     printf("inifile  参数文件名。\n");
     printf("outpath  数据文件存放的目录。\n");
@@ -91,8 +91,11 @@ int main(int argc, char *argv[]) {
 
   //  获取当前时间作为观测时间
   memset(str_date_time, 0, sizeof (str_date_time));
-  if (argc == 5) LocalTime(str_date_time, "yyyymmddhh24miss");
-  else STRCPY(str_date_time, sizeof (str_date_time), argv[5]);
+  if (argc == 5) {
+    LocalTime(str_date_time, "yyyymmddhh24miss");
+  }else {
+    STRCPY(str_date_time, sizeof (str_date_time), argv[5]);
+  }
   
   // 模拟生成站点分钟观测数据。
   simulation_gen_data();

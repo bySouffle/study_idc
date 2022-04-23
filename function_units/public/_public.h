@@ -339,7 +339,6 @@ class CDir {
 
   ~CDir();  // 析构函数。
 
- private:
   char m_DirName[301];        // 目录名，例如：/tmp/root。
   char m_FileName[301];       // 文件名，不包括目录名，例如：data.xml。
   char m_FullFileName[301];   // 文件全名，包括目录名，例如：/tmp/root/data.xml。
@@ -351,6 +350,8 @@ class CDir {
 
   std::vector<std::string> m_vFileName; // 存放OpenDir方法获取到的绝对路径文件名清单。
   int m_pos;                  // 已读取m_vFileName容器的位置，每调用一次ReadDir方法m_pos加1。
+
+ private:
 
   //! 这是一个递归函数，被OpenDir()的调用，在CDir类的外部不需要调用它
   //! \param in_DirName
