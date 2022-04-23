@@ -3,7 +3,11 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
-CLogFile logfile; //  文件操作class
+CPActive active_;  //  进程心跳
+
+CLogFile logfile_; //  文件操作class
+
+CFile file_;   // 文件操作对象
 
 // 站点参数结构体。
 typedef struct StationCode {
@@ -44,34 +48,52 @@ void simulation_gen_data();
 //  把 vec_station_data 数据写入文件
 bool save_station_data(const char *out_path,const char *data_fmt);
 
+//  程序退出信号处理函数
+void EXIT(int signal);
+
 int main(int argc, char *argv[]) {
 
   std::cout << "Hello, World!" << std::endl;
   if ((argc != 5) && (argc != 6)) {
     // 如果参数非法，给出帮助文档。
-    printf("Using:   ./study_idc inifile outpath logfile\n");
+    printf("Using:   ./study_idc ini_file out_path logfile_ data_fmt [date_time]\n");
     printf("Example: ./study_idc /tmp/study_idc/ini/station_code.ini /tmp/proc_data /tmp/study_idc/log_info.log\n\n");
-    printf("         ./study_idc /tmp/study_idc/ini/station_code.ini /tmp/proc_data /tmp/study_idc/log_info.log xml 5\n");
+    printf("         ./study_idc /tmp/study_idc/ini/station_code.ini /tmp/proc_data /tmp/study_idc/log_info.log xml,json,csv\n");
+    printf("         ./study_idc /tmp/study_idc/ini/station_code.ini /tmp/proc_data /tmp/study_idc/log_info.log xml,json,csv 20220423204000\n");
 
     printf("inifile  参数文件名。\n");
     printf("outpath  数据文件存放的目录。\n");
-    printf("logfile  本程序运行的日志文件名。\n");
+    printf("logfile_  本程序运行的日志文件名。\n");
     printf("datafmt 生成数据文件的格式，支持xml、json和csv三种格式，中间用逗号分隔。\n\n");
 
 
     return -1;
   }
 
+  //  关闭全部信号与IO
+  CloseIOAndSignal(true);
+  // 设置信号,在shell状态下可用 "kill + 进程号" 正常终止些进程。
+  // 但请不要用 "kill -9 +进程号" 强行终止。
+  signal(SIGINT, EXIT);
+  signal(SIGTERM, EXIT);
+  
   // 打开程序的日志文件。
-  if (logfile.Open(argv[3], "a+", false) == false) {
-    printf("logfile.Open(%s) failed.\n", argv[3]);
+  if (logfile_.Open(argv[3], "a+", false) == false) {
+    printf("logfile_.Open(%s) failed.\n", argv[3]);
     return -1;
   }
-  logfile.Write("study_idc 开始运行。\n");
+  logfile_.Write("study_idc 开始运行。\n");
 
+  active_.AddPInfo(20, "study_idc"); //  添加心跳信息到SHM
+  
   // 把站点参数文件中加载到vec_station_code容器中。
   if (LoadSTCode(argv[1]) == false) return -1;
 
+  //  获取当前时间作为观测时间
+  memset(str_date_time, 0, sizeof (str_date_time));
+  if (argc == 5) LocalTime(str_date_time, "yyyymmddhh24miss");
+  else STRCPY(str_date_time, sizeof (str_date_time), argv[5]);
+  
   // 模拟生成站点分钟观测数据。
   simulation_gen_data();
 
@@ -80,17 +102,15 @@ int main(int argc, char *argv[]) {
   if(strstr(argv[4], "json")!= nullptr) save_station_data(argv[2], "json");
   if(strstr(argv[4], "csv")!= nullptr) save_station_data(argv[2], "csv");
 
-  logfile.Write("study_idc 运行结束。\n");
+  logfile_.Write("study_idc 运行结束。\n");
   return 0;
 }
 
 // 把站点参数文件中加载到vec_station_code容器中。
 bool LoadSTCode(const char *ini_file) {
-  CFile File;
-
   // 打开站点参数文件。
-  if (File.Open(ini_file, "r") == false) {
-    logfile.Write("File.Open(%s) failed.\n", ini_file);
+  if (file_.Open(ini_file, "r") == false) {
+    logfile_.Write("file_.Open(%s) failed.\n", ini_file);
     return false;
   }
 
@@ -102,7 +122,7 @@ bool LoadSTCode(const char *ini_file) {
 
   while (true) {
     // 从站点参数文件中读取一行，如果已读取完，跳出循环。
-    if (File.Fgets(strBuffer, 255, true) == false) break;
+    if (file_.Fgets(strBuffer, 255, true) == false) break;
 
     // 把读取到的一行拆分。
     CmdStr.SplitToCmd(strBuffer, ",", true);
@@ -123,7 +143,7 @@ bool LoadSTCode(const char *ini_file) {
   }
 
   for (auto & it : vec_station_code){\
-    logfile.Write("provname=%s,obtid=%s,obtname=%s,lat=%.2f,lon=%.2f,height=%.2f\n",
+    logfile_.Write("provname=%s,obtid=%s,obtname=%s,lat=%.2f,lon=%.2f,height=%.2f\n",
                   it.province_name,
                   it.obt_id,
                   it.obt_name,
@@ -137,10 +157,10 @@ bool LoadSTCode(const char *ini_file) {
 
 // 模拟生成站点分钟观测数据，存放在 vec_station_data 中。
 void simulation_gen_data() {
-  srand(time(nullptr));
-  memset(str_date_time,0,sizeof (str_date_time));
-  LocalTime(str_date_time, "yyyymmddhh24miss");
+//  memset(str_date_time,0,sizeof (str_date_time));
+//  LocalTime(str_date_time, "yyyymmddhh24miss");
 
+  srand(time(nullptr));
   StationData_t station_data;
 
   for (auto & i : vec_station_code) {
@@ -163,7 +183,7 @@ void simulation_gen_data() {
 
   //  写入日志文件
   for (auto & it : vec_station_data){
-    logfile.Write("obt_id=%s,date_time=%s,t=%d,p=%d,u=%d,wd=%d,wf=%d,r=%d,vis=%d\n",
+    logfile_.Write("obt_id=%s,date_time=%s,t=%d,p=%d,u=%d,wd=%d,wf=%d,r=%d,vis=%d\n",
                   it.obt_id,
                   it.date_time,
                   it.t,
@@ -179,7 +199,7 @@ void simulation_gen_data() {
 
 //  把 vec_station_data 数据写入文件
 bool save_station_data(const char *out_path, const char *data_fmt) {
-  CFile file;
+//  CFile file_;
   //  设置文件名
 //  std::string save_filename;
 //  save_filename  = save_filename + out_path +
@@ -188,17 +208,17 @@ bool save_station_data(const char *out_path, const char *data_fmt) {
   sprintf(save_filename,"%s/StationData_%s_%d.%s",out_path,str_date_time,getpid(),data_fmt);
 
   //  打开文件
-  if(file.Open(save_filename, "w") == false){
-    logfile.Write("File.OpenForRename(%s) failed.\n",save_filename); return false;
+  if(file_.OpenForRename(save_filename, "w") == false){
+    logfile_.Write("file_.OpenForRename(%s) failed.\n",save_filename); return false;
   }
 
   //  写入table
   if(strcmp(data_fmt, "csv") == 0){
-    file.Fprintf("站点代码,数据时间,气温,气压,相对湿度,风向,风速,降雨量,能见度\n");
+    file_.Fprintf("站点代码,数据时间,气温,气压,相对湿度,风向,风速,降雨量,能见度\n");
   }
 
   if(strcmp(data_fmt, "xml") == 0){
-    file.Fprintf("<data>\n");
+    file_.Fprintf("<data>\n");
   }
 
   if(strcmp(data_fmt, "json") == 0){
@@ -206,29 +226,29 @@ bool save_station_data(const char *out_path, const char *data_fmt) {
 
   for (auto &it: vec_station_data) {
     if(strcmp(data_fmt, "csv") == 0) {
-      file.Fprintf("%s,%s,%.1f,%.1f,%d,%d,%.1f,%.1f,%.1f\n",
-                   it.obt_id,
-                   it.date_time,
-                   it.t,
-                   it.p,
-                   it.u,
-                   it.wd,
-                   it.wf,
-                   it.r,
-                   it.vis);
+      file_.Fprintf("%s,%s,%.1d,%.1d,%d,%d,%.1d,%.1d,%.1d\n",
+                    it.obt_id,
+                    it.date_time,
+                    it.t,
+                    it.p,
+                    it.u,
+                    it.wd,
+                    it.wf,
+                    it.r,
+                    it.vis);
     }
     if(strcmp(data_fmt, "xml") == 0){
-      file.Fprintf("<obtid>%s</obtid><ddatetime>%s</ddatetime><t>%.1f</t><p>%.1f</p>"\
-                   "<u>%d</u><wd>%d</wd><wf>%.1f</wf><r>%.1f</r><vis>%.1f</vis><endl/>\n",
-                   it.obt_id,
-                   it.date_time,
-                   it.t,
-                   it.p,
-                   it.u,
-                   it.wd,
-                   it.wf,
-                   it.r,
-                   it.vis);
+      file_.Fprintf("<obtid>%s</obtid><ddatetime>%s</ddatetime><t>%.1d</t><p>%.1d</p>"\
+                   "<u>%d</u><wd>%d</wd><wf>%.1d</wf><r>%.1d</r><vis>%.1d</vis><endl/>\n",
+                    it.obt_id,
+                    it.date_time,
+                    it.t,
+                    it.p,
+                    it.u,
+                    it.wd,
+                    it.wf,
+                    it.r,
+                    it.vis);
     }
     if(strcmp(data_fmt, "json") == 0){
       CStationData data(
@@ -249,18 +269,27 @@ bool save_station_data(const char *out_path, const char *data_fmt) {
       rapidjson::Writer<rapidjson::StringBuffer> w(s);
       w.String(writer.GetString());
 
-      file.Fprintf(s.GetString());
-      file.Fprintf("\n");
+      file_.Fprintf(s.GetString());
+      file_.Fprintf("\n");
 
     }
 
     }
-  if (strcmp(data_fmt,"xml")== 0) file.Fprintf("</data>\n");
+  if (strcmp(data_fmt,"xml")== 0) file_.Fprintf("</data>\n");
   if (strcmp(data_fmt,"json")==0) {}
 
   //  关闭文件
-  file.CloseAndRename();
-  logfile.Write("生成数据文件%s成功，数据时间%s，记录数%d。\n", save_filename, str_date_time, vec_station_data.size());
+  file_.CloseAndRename();
+
+  //  修改文件时间属性
+  UTime(save_filename, str_date_time);
+
+  logfile_.Write("生成数据文件%s成功，数据时间%s，记录数%d。\n", save_filename, str_date_time, vec_station_data.size());
   return true;
 
+}
+
+void EXIT(int signal){
+  logfile_.Write("程序退出，sig=%d\n\n",signal);
+  exit(0);
 }
