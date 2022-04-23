@@ -9,11 +9,12 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <thread>
+#include "_public.h"
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
-    printf("Using:./single_item_example timer program argv ...\n");
-    printf("Example:./single_item_example 5 /usr/bin/ls -alh /tmp \n\n");
+    printf("Using:./service_scheduler timer program argv ...\n");
+    printf("Example:./service_scheduler 5 /usr/bin/ls -alh /tmp \n\n");
 
     printf("本程序是服务程序的调度程序，周期性启动服务程序或shell脚本。\n");
     printf("timer   运行周期，单位：秒。被调度的程序运行结束后，在timer秒后会被 single_item_example 重新启动。\n");
@@ -24,10 +25,11 @@ int main(int argc, char *argv[]) {
   }
 
   //  关闭信号与IO
-  for (int i = 0; i < 64; ++i) {
-    signal(i, SIG_IGN);
-    close(i);
-  }
+//  for (int i = 0; i < 64; ++i) {
+//    signal(i, SIG_IGN);
+//    close(i);
+//  }
+    CloseIOAndSignal(true);
 
   //  fork子进程 父进程退出让程序由pid1托管
   if (fork() != 0) exit(0);
