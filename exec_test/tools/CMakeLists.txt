@@ -11,6 +11,8 @@ find_package(Threads REQUIRED)
 file(
         GLOB_RECURSE single_item_example RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}/gzip_files.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/delete_files.cpp"
+
 )
 
 # 循环遍历每个含main的文件，分别编译生成执行文件

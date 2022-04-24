@@ -63,3 +63,7 @@ TEST(shm, test_read) {
 TEST(sem, pv_opt){
 
 }
+
+TEST(delete_file, remove){
+  std::cout << REMOVE("/tmp/study_idc/cmake-build-debug/exec_test/tools/zzz.1") << "\n";
+}
