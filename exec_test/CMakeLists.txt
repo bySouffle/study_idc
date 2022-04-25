@@ -4,7 +4,7 @@ project(single_item_example)
 set(CMAKE_CXX_STANDARD 14)
 
 include_directories(../function_units/public)
-
+link_directories(../function_units/public)
 find_package(Threads REQUIRED)
 
 
