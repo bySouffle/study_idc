@@ -67,7 +67,7 @@ public:
   //! \param remote_dir       ftp服务器的目录名
   //! \param list_filename    用于保存从服务器返回的目录和文件名列表
   //! \return                 true-成功；false-失败
-  //! \note   如果列出的是ftp服务器当前目录，remote_dir 用"","*","."都可以，但是，不规范的ftp服务器可能有差别
+  //! \note   如果列出的是ftp服务器当前目录，remote_dir 用"", "*", "."都可以，但是，不规范的ftp服务器可能有差别
   bool nlist(const char *remote_dir,const char *list_filename);
 
   //! 从ftp服务器上获取文件

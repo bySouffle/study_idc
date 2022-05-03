@@ -101,7 +101,8 @@ void help() {
          "<password>admin</password>"
          "<local_path>/tmp/download_proc_data</local_path>"
          "<remote_path>/tmp/proc_data</remote_path>"
-         "<match_name>SURF_ZH*.XML,SURF_ZH*.CSV</match_name>\"\n\n\n");
+         "<match_name>SURF_ZH*.XML,SURF_ZH*.CSV</match_name>"
+         "<list_filename>/tmp/proc_data/remote_ftp_file.list</list_filename>\"\n\n\n");
 
   printf("本程序是通用的功能模块，用于把远程ftp服务器的文件下载到本地目录。\n");
   printf("logfile_name是本程序运行的日志文件。\n");
@@ -114,6 +115,8 @@ void help() {
   printf("<local_path>/tmp/idc/download_proc_data</local_path> 本地文件存放的目录。\n");
   printf("<match_name>SURF_ZH*.XML,SURF_ZH*.CSV</match_name> 待下载文件匹配的规则。"\
          "不匹配的文件不会被下载，本字段尽可能设置精确，不建议用*匹配全部的文件。\n\n\n");
+  printf("<list_filename>/tmp/proc_data/remote_ftp_file.list</list_filename> 下载前列出服务器文件名的文件。\n\n\n");
+
 }
 
 bool xml_parse(const char *xml_buffer) {
@@ -158,6 +161,12 @@ bool xml_parse(const char *xml_buffer) {
     return false;
   }
 
+  GetXMLBuffer(xml_buffer, "list_filename", ftp_args.list_filename, 100);   // 待下载文件匹配的规则。
+  if (strlen(ftp_args.match_name) == 0) {
+    logfile.Write("list_filename is null.\n");
+    return false;
+  }
+
   return true;
 }
 void EXIT(int signal) {
@@ -175,13 +184,13 @@ bool ftp_get_files() {
     logfile.Write("ftp.nlist(%s) failed.\n",ftp_args.remote_path); return false;
   }
 
-  // 把ftp.nlist()方法获取到的list文件加载到容器vlistfile中。
+  // 把ftp.nlist()方法获取到的list文件加载到容器vec_file_list中。
   if (load_list_file()==false){
     logfile.Write("LoadListFile() failed.\n");  return false;
   }
   char remote_filename[301],local_filename[301];
 
-  // 遍历容器vlistfile。
+  // 遍历容器vec_file_list。
   for (int ii=0;ii<vec_file_list.size();ii++)
   {
     memset(remote_filename,0,sizeof (remote_filename));
