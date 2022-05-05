@@ -14,7 +14,8 @@ typedef struct FtpArgs {
   char local_path[301];     // 本地文件存放的目录。
   char match_name[101];     // 待下载文件匹配的规则。
   char list_filename[301];  // 下载前列出服务器文件名的文件。
-
+  int  proc_type;              // 下载后服务器文件的处理方式：1-什么也不做；2-删除；3-备份。
+  char remote_backup_dir[301]; // 下载后服务器文件的备份目录。
 } FtpArgs_t;
 
 //  帮助信息
@@ -95,14 +96,17 @@ void help() {
   printf("Using:./ftp_get_files logfile_name xml_buffer\n\n");
 
   printf("Sample:./service_scheduler 30 /${pwd}/tools/ftp_get_files /tmp/idc/proc_data/ftp.log "
-         "\"<host>127.0.0.1:21</host>"
+         "\"<host>192.168.3.50:2121</host>"
          "<mode>1</mode>"
          "<username>bys</username>"
          "<password>admin</password>"
          "<local_path>/tmp/download_proc_data</local_path>"
-         "<remote_path>/tmp/proc_data</remote_path>"
+         "<remote_path>/Alipay</remote_path>"
          "<match_name>SURF_ZH*.XML,SURF_ZH*.CSV</match_name>"
-         "<list_filename>/tmp/proc_data/remote_ftp_file.list</list_filename>\"\n\n\n");
+         "<list_filename>/tmp/proc_data/remote_ftp_file.list</list_filename>"
+         "<proc_type>3</proc_type>"
+         "<remote_backup_dir>/backup</remote_backup_dir>"
+         "\"\n\n\n");
 
   printf("本程序是通用的功能模块，用于把远程ftp服务器的文件下载到本地目录。\n");
   printf("logfile_name是本程序运行的日志文件。\n");
@@ -113,9 +117,15 @@ void help() {
   printf("<password>admin</password> 远程服务器ftp的密码。\n");
   printf("<remote_path>/tmp/idc/proc_data</remote_path> 远程服务器存放文件的目录。\n");
   printf("<local_path>/tmp/idc/download_proc_data</local_path> 本地文件存放的目录。\n");
-  printf("<match_name>SURF_ZH*.XML,SURF_ZH*.CSV</match_name> 待下载文件匹配的规则。"\
+  printf("<match_name>SURF_ZH*.XML,SURF_ZH*.CSV</match_name> 待下载文件匹配的规则。"
          "不匹配的文件不会被下载，本字段尽可能设置精确，不建议用*匹配全部的文件。\n\n\n");
+
   printf("<list_filename>/tmp/proc_data/remote_ftp_file.list</list_filename> 下载前列出服务器文件名的文件。\n\n\n");
+
+  printf("<proc_type>1</proc_type> 文件下载成功后，远程服务器文件的处理方式：1-什么也不做；2-删除；3-备份，"
+         "如果为3，还要指定备份的目录。\n");
+  printf("<remote_backup_dir>/tmp/idc/remote_backup_dir</remote_backup_dir> "
+         "文件下载成功后，服务器文件的备份目录，此参数只有当proc_type=3时才有效。\n\n\n");
 
 }
 
@@ -167,6 +177,20 @@ bool xml_parse(const char *xml_buffer) {
     return false;
   }
 
+  // 下载后服务器文件的处理方式：1-什么也不做；2-删除；3-备份。
+  GetXMLBuffer(xml_buffer, "proc_type", &ftp_args.proc_type);
+  if ( (ftp_args.proc_type!=1) && (ftp_args.proc_type!=2) && (ftp_args.proc_type!=3) ) {
+    logfile.Write("proc_type is error.\n");
+    return false; 
+  }
+
+
+  GetXMLBuffer(xml_buffer, "remote_backup_dir", ftp_args.remote_backup_dir, 100);   // 待下载文件匹配的规则。
+  if ( (ftp_args.proc_type==3) && (strlen(ftp_args.remote_backup_dir)==0) ) {
+    logfile.Write("remote_backup_dir is null.\n");
+    return false;
+  }
+  
   return true;
 }
 void EXIT(int signal) {
@@ -188,6 +212,13 @@ bool ftp_get_files() {
   if (load_list_file()==false){
     logfile.Write("LoadListFile() failed.\n");  return false;
   }
+
+  if (strlen(ftp_args.remote_backup_dir) != 0){
+    if( ftp.mkdir(ftp_args.remote_backup_dir) == false){
+      logfile.Write("dir exist or ftp.mkdir(%s) failed.\n",ftp_args.remote_backup_dir);
+    }
+  }
+
   char remote_filename[301],local_filename[301];
 
   // 遍历容器vec_file_list。
@@ -209,7 +240,25 @@ bool ftp_get_files() {
 
     logfile.WriteEx("ok.\n");
 
+    //  del file
+    if (ftp_args.proc_type == 2){
+      if (ftp.ftpdelete(remote_filename) == false){
+        logfile.Write("ftp.ftpdelete(%s) failed.\n",remote_filename); return false;
+      }
+    }
+
+    //  转到备份目录
+    if (ftp_args.proc_type == 3){
+
+      char str_remote_backup_dir[301];
+      SNPRINTF(str_remote_backup_dir,sizeof(str_remote_backup_dir),300,"%s/%s",ftp_args.remote_backup_dir,vec_file_list[ii].filename);
+      if (ftp.ftprename(remote_filename,str_remote_backup_dir)==false)
+      {
+        logfile.Write("ftp.ftprename(%s,%s) failed.\n",remote_filename,str_remote_backup_dir); return false;
+      }
+    }
   }
+  return true;
 
 }
 bool load_list_file() {
