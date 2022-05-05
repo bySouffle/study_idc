@@ -16,6 +16,8 @@ typedef struct FtpArgs {
   char list_filename[301];  // 下载前列出服务器文件名的文件。
   int  proc_type;              // 下载后服务器文件的处理方式：1-什么也不做；2-删除；3-备份。
   char remote_backup_dir[301]; // 下载后服务器文件的备份目录。
+  char success_download_list[301];    // 已下载成功文件名清单。
+
 } FtpArgs_t;
 
 //  帮助信息
@@ -32,7 +34,24 @@ typedef struct FileInfo
   char filename[301];   // 文件名。
   char mtime[21];       // 文件时间。
 }FileInfo_t;
-std::vector<FileInfo_t> vec_file_list;    // 存放下载前列出服务器文件名的容器。
+
+std::vector<FileInfo_t> vec_file_list;              // 存放下载前列出服务器文件名的容器。
+std::vector<FileInfo_t> vec_downloaded_list;        // 已下载成功文件名的容器，从success_download_list中加载。。
+std::vector<FileInfo_t> vec_need_download_list;     // 本次需要下载的文件的容器。
+std::vector<FileInfo_t> vec_no_download_list;       // 本次不需要下载的文件的容器。
+
+//  加载下载完成的清单到vec_downloaded_list
+bool load_downloaded_file();
+
+//  比较 vec_file_list | vec_downloaded_list ==> vec_need_download_list vec_no_download_list
+bool comp_file_list();
+
+//  把 下载完成的vec_no_download_list 追加到 vec_downloaded_list 覆盖旧的文件
+bool update_downloaded_file();
+
+//  if proc_type = 1 把下载成功的文件记录追加到 success_download_list 文件中。
+bool append_downloaded_file(FileInfo_t* file_info);
+
 
 bool load_list_file();
 bool ftp_get_files();
@@ -106,6 +125,7 @@ void help() {
          "<list_filename>/tmp/proc_data/remote_ftp_file.list</list_filename>"
          "<proc_type>3</proc_type>"
          "<remote_backup_dir>/backup</remote_backup_dir>"
+         "<success_download_list>/tmp/proc_data/remote_ftp_success_download.xml</success_download_list>"
          "\"\n\n\n");
 
   printf("本程序是通用的功能模块，用于把远程ftp服务器的文件下载到本地目录。\n");
@@ -126,7 +146,8 @@ void help() {
          "如果为3，还要指定备份的目录。\n");
   printf("<remote_backup_dir>/tmp/idc/remote_backup_dir</remote_backup_dir> "
          "文件下载成功后，服务器文件的备份目录，此参数只有当proc_type=3时才有效。\n\n\n");
-
+  printf("<success_download_list>/tmp/proc_data/remote_ftp_success_download.xml</success_download_list> "
+         "已下载成功文件名清单，此参数只有当proc_type=1时才有效。\n\n\n");
 }
 
 bool xml_parse(const char *xml_buffer) {
@@ -184,13 +205,18 @@ bool xml_parse(const char *xml_buffer) {
     return false; 
   }
 
-
   GetXMLBuffer(xml_buffer, "remote_backup_dir", ftp_args.remote_backup_dir, 100);   // 待下载文件匹配的规则。
   if ( (ftp_args.proc_type==3) && (strlen(ftp_args.remote_backup_dir)==0) ) {
     logfile.Write("remote_backup_dir is null.\n");
     return false;
   }
-  
+
+  GetXMLBuffer(xml_buffer,"success_download_list",ftp_args.success_download_list,300); // 已下载成功文件名清单。
+  if ( (ftp_args.proc_type==1) && (strlen(ftp_args.success_download_list)==0) ){
+    logfile.Write("success_download_list is null.\n");
+    return false;
+  }
+
   return true;
 }
 void EXIT(int signal) {
@@ -211,6 +237,14 @@ bool ftp_get_files() {
   // 把ftp.nlist()方法获取到的list文件加载到容器vec_file_list中。
   if (load_list_file()==false){
     logfile.Write("LoadListFile() failed.\n");  return false;
+  }
+
+  if (ftp_args.proc_type == 1){
+    load_downloaded_file();
+    comp_file_list();
+    update_downloaded_file();
+    vec_file_list.clear();
+    vec_file_list.swap(vec_need_download_list);
   }
 
   if (strlen(ftp_args.remote_backup_dir) != 0){
@@ -239,6 +273,11 @@ bool ftp_get_files() {
     }
 
     logfile.WriteEx("ok.\n");
+
+    // 如果ptype==1，把下载成功的文件记录追加到okfilename文件中。
+    if (ftp_args.proc_type==1){
+      append_downloaded_file(&vec_file_list[ii]);
+    }
 
     //  del file
     if (ftp_args.proc_type == 2){
@@ -282,3 +321,67 @@ bool load_list_file() {
   }
   return true;
 }
+bool load_downloaded_file() {
+  vec_downloaded_list.clear();
+
+  CFile file;
+  //  第一次下载文件不存在，返回true
+  if (file.Open(ftp_args.success_download_list, "r") == false)  return true;
+  FileInfo_t file_info{};
+
+  while (true){
+    if (file.Fgets(file_info.filename,300, true) == false) break;
+
+    vec_downloaded_list.emplace_back(file_info);
+  }
+  return true;
+}
+bool comp_file_list() {
+  vec_no_download_list.clear();
+  vec_need_download_list.clear();
+
+  int i,j;
+  for ( i = 0; i <  vec_file_list.size(); ++i) {
+    //  已经下载的加到vec_no_download_list
+    for ( j = 0; j < vec_downloaded_list.size(); ++j) {
+      if (strcmp(vec_file_list.at(i).filename, vec_downloaded_list.at(j).filename) == 0){
+        vec_no_download_list.emplace_back(vec_file_list.at(i));
+        break;
+      }
+    }
+    //  未下载的加到vec_need_download_list
+    if (j == vec_downloaded_list.size()){
+      vec_need_download_list.emplace_back(vec_file_list.at(i));
+    }
+  }
+
+
+  return true;
+}
+bool update_downloaded_file() {
+  CFile File;
+
+  if (File.Open(ftp_args.success_download_list,"w")==false)
+  {
+    logfile.Write("File.Open(%s) failed.\n",ftp_args.success_download_list); return false;
+  }
+
+  for (int i=0; i<vec_no_download_list.size(); i++)
+    File.Fprintf("%s\n",vec_no_download_list[i].filename);
+
+  return true;
+}
+
+bool append_downloaded_file(FileInfo_t* file_info) {
+  CFile File;
+
+  if (File.Open(ftp_args.success_download_list,"a")==false)
+  {
+    logfile.Write("File.Open(%s) failed.\n",ftp_args.success_download_list); return false;
+  }
+
+  File.Fprintf("%s\n",file_info->filename);
+
+  return true;
+}
+
