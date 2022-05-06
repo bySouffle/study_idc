@@ -17,7 +17,9 @@ typedef struct FtpArgs {
   int  proc_type;              // 下载后服务器文件的处理方式：1-什么也不做；2-删除；3-备份。
   char remote_backup_dir[301]; // 下载后服务器文件的备份目录。
   char success_download_list[301];    // 已下载成功文件名清单。
-
+  bool check_sf_time;         // 是否需要检查服务端文件的时间，true-需要，false-不需要，缺省为false。
+  int  timeout;            // 进程心跳的超时时间。
+  char proc_name[51];          // 进程名，建议用"ftp_get_files_后缀"的方式。
 } FtpArgs_t;
 
 //  帮助信息
@@ -60,6 +62,8 @@ CLogFile logfile;
 FtpArgs_t ftp_args{};
 Cftp ftp;
 
+CPActive active;  //  进程心跳
+
 int main(int argc, char *argv[]) {
   if (argc != 3) {
     help();
@@ -82,6 +86,7 @@ int main(int argc, char *argv[]) {
   // 解析xml，得到程序运行的参数。
   if (xml_parse(argv[2]) == false) return -1;
 
+  active.AddPInfo(ftp_args.timeout, ftp_args.proc_name);
 
   // 1. 登录ftp服务器。
   if (ftp.login(ftp_args.host, ftp_args.username, ftp_args.password,
@@ -126,6 +131,9 @@ void help() {
          "<proc_type>3</proc_type>"
          "<remote_backup_dir>/backup</remote_backup_dir>"
          "<success_download_list>/tmp/proc_data/remote_ftp_success_download.xml</success_download_list>"
+         "<check_sf_time>true</check_sf_time>"
+         "<timeout>80</timeout>"
+         "<proc_name>ftp_get_files</proc_name>"
          "\"\n\n\n");
 
   printf("本程序是通用的功能模块，用于把远程ftp服务器的文件下载到本地目录。\n");
@@ -148,6 +156,11 @@ void help() {
          "文件下载成功后，服务器文件的备份目录，此参数只有当proc_type=3时才有效。\n\n\n");
   printf("<success_download_list>/tmp/proc_data/remote_ftp_success_download.xml</success_download_list> "
          "已下载成功文件名清单，此参数只有当proc_type=1时才有效。\n\n\n");
+  printf("<check_sf_time>true</check_sf_time> 是否需要检查服务端文件的时间，true-需要，false-不需要，"
+         "此参数只有当proc_type=1时才有效，缺省为false。\n");
+  printf("<timeout>80</timeout> 下载文件超时时间，单位：秒，视文件大小和网络带宽而定。\n");
+  printf("<proc_name>ftp_get_files</proc_name> 进程名，尽可能采用易懂的、与其它进程不同的名称，方便故障排查。\n\n\n");
+
 }
 
 bool xml_parse(const char *xml_buffer) {
@@ -202,7 +215,7 @@ bool xml_parse(const char *xml_buffer) {
   GetXMLBuffer(xml_buffer, "proc_type", &ftp_args.proc_type);
   if ( (ftp_args.proc_type!=1) && (ftp_args.proc_type!=2) && (ftp_args.proc_type!=3) ) {
     logfile.Write("proc_type is error.\n");
-    return false; 
+    return false;
   }
 
   GetXMLBuffer(xml_buffer, "remote_backup_dir", ftp_args.remote_backup_dir, 100);   // 待下载文件匹配的规则。
@@ -217,6 +230,20 @@ bool xml_parse(const char *xml_buffer) {
     return false;
   }
 
+  GetXMLBuffer(xml_buffer,"check_sf_time",&ftp_args.check_sf_time);
+
+  GetXMLBuffer(xml_buffer,"timeout",&ftp_args.timeout); //  进程心跳的超时时间。
+  if (ftp_args.timeout==0) {
+    logfile.Write("timeout is null.\n");
+    return false;
+  }
+
+  GetXMLBuffer(xml_buffer,"proc_name",ftp_args.proc_name,50); // 已下载成功文件名清单。
+  if (strlen(ftp_args.proc_name)==0) {
+    logfile.Write("proc_name is null.\n");
+    return false;
+  }
+
   return true;
 }
 void EXIT(int signal) {
@@ -228,16 +255,20 @@ bool ftp_get_files() {
   if (ftp.chdir(ftp_args.remote_path)==false){
     logfile.Write("ftp.chdir(%s) failed.\n",ftp_args.remote_path); return false;
   }
-  
+
   // 调用ftp.nlist()方法列出服务器目录中的文件，结果存放到本地文件中。
   if (ftp.nlist(".",ftp_args.list_filename)==false){
     logfile.Write("ftp.nlist(%s) failed.\n",ftp_args.remote_path); return false;
   }
 
+  active.UptATime();
+
   // 把ftp.nlist()方法获取到的list文件加载到容器vec_file_list中。
   if (load_list_file()==false){
     logfile.Write("LoadListFile() failed.\n");  return false;
   }
+
+  active.UptATime();
 
   if (ftp_args.proc_type == 1){
     load_downloaded_file();
@@ -246,6 +277,8 @@ bool ftp_get_files() {
     vec_file_list.clear();
     vec_file_list.swap(vec_need_download_list);
   }
+
+  active.UptATime();
 
   if (strlen(ftp_args.remote_backup_dir) != 0){
     if( ftp.mkdir(ftp_args.remote_backup_dir) == false){
@@ -273,6 +306,8 @@ bool ftp_get_files() {
     }
 
     logfile.WriteEx("ok.\n");
+
+    active.UptATime();
 
     // 如果ptype==1，把下载成功的文件记录追加到okfilename文件中。
     if (ftp_args.proc_type==1){
@@ -317,6 +352,14 @@ bool load_list_file() {
 
     if (MatchStr(file_info.filename,ftp_args.match_name)==false) continue;
 
+    if ((ftp_args.proc_type == 1)&&(ftp_args.check_sf_time== true)){
+      //  获取ftp server file time
+      if (ftp.mtime(file_info.filename) == false){
+        logfile.Write("ftp.mtime(%s) failed.\n",file_info.filename); return false;
+      }
+      strcpy(file_info.mtime,ftp.m_mtime);
+    }
+
     vec_file_list.push_back(file_info);
   }
   return true;
@@ -327,11 +370,15 @@ bool load_downloaded_file() {
   CFile file;
   //  第一次下载文件不存在，返回true
   if (file.Open(ftp_args.success_download_list, "r") == false)  return true;
+  char str_buffer[512];
   FileInfo_t file_info{};
 
   while (true){
+
     if (file.Fgets(file_info.filename,300, true) == false) break;
 
+    GetXMLBuffer(str_buffer, "filename", file_info.filename);
+    GetXMLBuffer(str_buffer, "timestamp", file_info.mtime);
     vec_downloaded_list.emplace_back(file_info);
   }
   return true;
@@ -344,7 +391,8 @@ bool comp_file_list() {
   for ( i = 0; i <  vec_file_list.size(); ++i) {
     //  已经下载的加到vec_no_download_list
     for ( j = 0; j < vec_downloaded_list.size(); ++j) {
-      if (strcmp(vec_file_list.at(i).filename, vec_downloaded_list.at(j).filename) == 0){
+      if ((strcmp(vec_file_list.at(i).filename, vec_downloaded_list.at(j).filename) == 0)&&
+          (strcmp(vec_file_list.at(i).mtime, vec_downloaded_list.at(j).mtime) == 0)){
         vec_no_download_list.emplace_back(vec_file_list.at(i));
         break;
       }
@@ -354,7 +402,6 @@ bool comp_file_list() {
       vec_need_download_list.emplace_back(vec_file_list.at(i));
     }
   }
-
 
   return true;
 }
@@ -367,7 +414,8 @@ bool update_downloaded_file() {
   }
 
   for (int i=0; i<vec_no_download_list.size(); i++)
-    File.Fprintf("%s\n",vec_no_download_list[i].filename);
+    File.Fprintf("<filename>%s</filename><timestamp>%s</timestamp>\n",
+                 vec_no_download_list[i].filename, vec_no_download_list[i].mtime);
 
   return true;
 }
@@ -380,8 +428,8 @@ bool append_downloaded_file(FileInfo_t* file_info) {
     logfile.Write("File.Open(%s) failed.\n",ftp_args.success_download_list); return false;
   }
 
-  File.Fprintf("%s\n",file_info->filename);
-
+  File.Fprintf("<filename>%s</filename><timestamp>%s</timestamp>\n",
+               file_info->filename, file_info->mtime);
   return true;
 }
 
