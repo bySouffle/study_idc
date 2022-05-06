@@ -15,6 +15,7 @@ file(
         "${CMAKE_CURRENT_SOURCE_DIR}/gzip_files.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/delete_files.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ftp_get_files.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ftp_put_files.cpp"
 
 )
 
