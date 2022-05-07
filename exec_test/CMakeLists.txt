@@ -28,3 +28,4 @@ foreach(exec IN LISTS single_item_example)
 endforeach()
 
 add_subdirectory(tools)
+add_subdirectory(socket_tests)
