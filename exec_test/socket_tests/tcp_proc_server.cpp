@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
 //      static int login_ed = -1;
       std::cout << __LINE__ << "login_ed " << login_ed << "\n";
 
-      while (1) {
+      while (true) {
         if (tcp_server.Read(recv_buff) == true) {
           logfile.Write("client [%s] read_data: %s\n", tcp_server.GetIP(), recv_buff);
 

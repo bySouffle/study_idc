@@ -16,7 +16,8 @@ file(
         "${CMAKE_CURRENT_SOURCE_DIR}/delete_files.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ftp_get_files.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ftp_put_files.cpp"
-
+        "${CMAKE_CURRENT_SOURCE_DIR}/tcp_file_client.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tcp_file_server.cpp"
 )
 
 # 循环遍历每个含main的文件，分别编译生成执行文件

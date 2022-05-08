@@ -209,6 +209,8 @@ class CCmdStr {
 bool GetXMLBuffer(const char *xml_buffer, const char *field_name, char *value, const int in_len = 0);
 bool GetXMLBuffer(const char *xml_buffer, const char *field_name, bool *value);
 bool GetXMLBuffer(const char *xml_buffer, const char *field_name, int *value);
+bool GetXMLBuffer(const char *xml_buffer, const char *field_name, unsigned short *value);
+bool GetXMLBuffer(const char *xml_buffer, const char *field_name, short *value);
 bool GetXMLBuffer(const char *xml_buffer, const char *field_name, unsigned int *value);
 bool GetXMLBuffer(const char *xml_buffer, const char *field_name, long *value);
 bool GetXMLBuffer(const char *xml_buffer, const char *field_name, unsigned long *value);
@@ -699,7 +701,6 @@ class CTcpClient {
 
   ~CTcpClient();  // 析构函数自动关闭socket，释放资源。
 
- private:
   int m_conn_fd;    // 客户端的socket.
   char m_ip[21];    // 服务端的ip地址。
   int m_port;      // 与服务端通讯的端口。

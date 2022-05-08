@@ -791,9 +791,9 @@ bool GetXMLBuffer(const char *xmlbuffer,const char *fieldname,int *value)
     //  20220508  兼容16进制字符串转换
 //    (*value) = atoi(strTemp);
     if ( (strTemp[0]=='0') && (strTemp[1]=='x'||strTemp[1]=='X')){
-      (*value) = strtol(strTemp, nullptr, 16);
+      (*value) = static_cast<int>(strtol(strTemp, nullptr, 16)) ;
     } else{
-      (*value) = strtol(strTemp, nullptr, 10);
+      (*value) = static_cast<int>(strtol(strTemp, nullptr, 10)) ;
     }
      return true;
   }
@@ -813,7 +813,13 @@ bool GetXMLBuffer(const char *xmlbuffer,const char *fieldname,unsigned int *valu
 
   if (GetXMLBuffer(xmlbuffer,fieldname,strTemp,50) == true)
   {
-    (*value) = (unsigned int)atoi(strTemp); return true;
+    //  20220508  兼容16进制字符串转换
+//    (*value) = atoi(strTemp);
+    if ( (strTemp[0]=='0') && (strTemp[1]=='x'||strTemp[1]=='X')){
+      (*value) = static_cast<unsigned int>(strtol(strTemp, nullptr, 16)) ;
+    } else{
+      (*value) = static_cast<unsigned int>(strtol(strTemp, nullptr, 10)) ;
+    }
   }
 
   return false;
@@ -831,7 +837,13 @@ bool GetXMLBuffer(const char *xmlbuffer,const char *fieldname,long *value)
 
   if (GetXMLBuffer(xmlbuffer,fieldname,strTemp,50) == true)
   {
-    (*value) = atol(strTemp); return true;
+    //  20220508  兼容16进制字符串转换
+//    (*value) = atoi(strTemp);
+    if ( (strTemp[0]=='0') && (strTemp[1]=='x'||strTemp[1]=='X')){
+      (*value) = strtol(strTemp, nullptr, 16) ;
+    } else{
+      (*value) = strtol(strTemp, nullptr, 10) ;
+    }
   }
 
   return false;
@@ -849,7 +861,13 @@ bool GetXMLBuffer(const char *xmlbuffer,const char *fieldname,unsigned long *val
 
   if (GetXMLBuffer(xmlbuffer,fieldname,strTemp,50) == true)
   {
-    (*value) = (unsigned long)atol(strTemp); return true;
+    //  20220508  兼容16进制字符串转换
+//    (*value) = atoi(strTemp);
+    if ( (strTemp[0]=='0') && (strTemp[1]=='x'||strTemp[1]=='X')){
+      (*value) = static_cast<unsigned long>(strtol(strTemp, nullptr, 16)) ;
+    } else{
+      (*value) = static_cast<unsigned long>(strtol(strTemp, nullptr, 10)) ;
+    }
   }
 
   return false;
@@ -1919,6 +1937,51 @@ bool COPY(const char *srcfilename,const char *dstfilename)
   return true;
 }
 
+bool GetXMLBuffer(const char *xml_buffer, const char *field_name, unsigned short *value) {
+  if (value==0) return false;    // 判断空指针。
+
+  (*value) = 0;
+
+  char strTemp[51];
+
+  memset(strTemp,0,sizeof(strTemp));
+
+  if (GetXMLBuffer(xml_buffer,field_name,strTemp,50) == true) {
+    //  20220508  兼容16进制字符串转换
+//    (*value) = atoi(strTemp);
+    if ( (strTemp[0]=='0') && (strTemp[1]=='x'||strTemp[1]=='X')){
+      (*value) = static_cast<unsigned short>( strtol(strTemp, nullptr, 16) ) ;
+    } else{
+      (*value) = static_cast<unsigned short>( strtol(strTemp, nullptr, 10) ) ;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+bool GetXMLBuffer(const char *xml_buffer, const char *field_name, short *value) {
+    if (value==0) return false;    // 判断空指针。
+
+    (*value) = 0;
+
+    char strTemp[51];
+
+    memset(strTemp,0,sizeof(strTemp));
+
+    if (GetXMLBuffer(xml_buffer,field_name,strTemp,50) == true) {
+      //  20220508  兼容16进制字符串转换
+//    (*value) = atoi(strTemp);
+      if ( (strTemp[0]=='0') && (strTemp[1]=='x'||strTemp[1]=='X')){
+        (*value) = static_cast<short>( strtol(strTemp, nullptr, 16) ) ;
+      } else{
+        (*value) = static_cast<short>( strtol(strTemp, nullptr, 10) ) ;
+      }
+      return true;
+    }
+
+    return false;
+}
 
 CTimer::CTimer()
 {
