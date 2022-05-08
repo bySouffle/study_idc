@@ -67,3 +67,11 @@ TEST(sem, pv_opt){
 TEST(delete_file, remove){
   std::cout << REMOVE("/tmp/study_idc/cmake-build-debug/exec_test/tools/zzz.1") << "\n";
 }
+
+TEST(xml_parse, hex){
+  std::cout << strtol("0x11", nullptr,16) << "\n";
+  std::string s("<opt_code>0x17</opt_code>");
+  int value = -1;
+  GetXMLBuffer(s.data(),"opt_code", &value);
+  std::cout << value;
+}

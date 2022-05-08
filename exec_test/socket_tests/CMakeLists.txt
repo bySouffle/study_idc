@@ -13,8 +13,8 @@ file(
         GLOB_RECURSE single_item_example RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tcp_server.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/tcp_client.cpp"
-#        "${CMAKE_CURRENT_SOURCE_DIR}/ftp_get_files.cpp"
-#        "${CMAKE_CURRENT_SOURCE_DIR}/ftp_put_files.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tcp_proc_server.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tcp_proc_client.cpp"
 
 )
 

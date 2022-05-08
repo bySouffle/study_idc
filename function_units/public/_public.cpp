@@ -788,7 +788,14 @@ bool GetXMLBuffer(const char *xmlbuffer,const char *fieldname,int *value)
 
   if (GetXMLBuffer(xmlbuffer,fieldname,strTemp,50) == true)
   {
-    (*value) = atoi(strTemp); return true;
+    //  20220508  兼容16进制字符串转换
+//    (*value) = atoi(strTemp);
+    if ( (strTemp[0]=='0') && (strTemp[1]=='x'||strTemp[1]=='X')){
+      (*value) = strtol(strTemp, nullptr, 16);
+    } else{
+      (*value) = strtol(strTemp, nullptr, 10);
+    }
+     return true;
   }
 
   return false;
