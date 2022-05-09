@@ -22,6 +22,6 @@ file(
 foreach(exec IN LISTS single_item_example)
     # Get file name without directory
     get_filename_component(exec ${exec} NAME_WE)
-    add_executable(${exec} ${exec})
+    add_executable(${exec} ${exec}.cpp)
     target_link_libraries(${exec} public_lib Threads::Threads )
 endforeach()
