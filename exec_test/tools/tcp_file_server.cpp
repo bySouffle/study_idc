@@ -36,7 +36,7 @@ bool xml_parse(const char *xml_buffer);
 //  上传业务函数
 int upload_proc();
 bool file_info_parse(const char *file_info_xml, FileInfo_t &file_info);
-bool recv_file(const int sockfd, const FileInfo_t& file_info);
+bool recv_file(const int sockfd, const FileInfo_t &file_info);
 //  下载业务函数
 int download_proc();
 
@@ -106,11 +106,12 @@ int main(int argc, char *argv[]) {
         break;
       }
       logfile.Write("[%s] check_login success\n", tcp_server.GetIP());
-      std::cout <<tcp_args.client_type;
-
+      std::cout << tcp_args.client_type;
 
       if (tcp_args.client_type == 1) {
         upload_proc();
+      } else if (tcp_args.client_type == 2) {
+        download_proc();
       }
 
       break;
@@ -156,7 +157,7 @@ bool check_login() {
   //  2. 解析到tcp_args中
   char recv_buff[1024]{};
   if (tcp_server.Read(recv_buff, 20) == false) {
-    logfile.Write("[%s] Read failed\n", tcp_server.GetIP());
+    logfile.Write(  "(%s: %d) [%s] Read failed\n", __FUNCTION__, __LINE__, tcp_server.GetIP());
     return false;
   }
   logfile.Write("[%s] Read: %s", tcp_server.GetIP(), recv_buff);
@@ -193,24 +194,77 @@ int upload_proc() {
   //  2. 读取文件到缓冲区
   //  3. 保存文件 ==> 更新临时文件
   //  4. 发送应答给client
+  //  5. 加入心跳报文 超时断开 客户端先发送 在文件发送前校验一次 发送完毕校验一次
   char recv_buff[1024]{};
-  if (tcp_server.Read(recv_buff) == false) {
-    logfile.Write("[%s] Read failed\n", tcp_server.GetIP());
-    return -1;
-  }
   FileInfo_t file_info{};
-  file_info_parse(recv_buff, file_info);
-  UpdateStr(file_info.file_name, tcp_args.client_path, tcp_args.server_path, false);
+  int cnt = 0;
+  while (true) {
+    memset(recv_buff,0,sizeof (recv_buff));
+    memset(&file_info,0,sizeof (file_info));
 
-  if ( recv_file(tcp_server.m_conn_fd, file_info) == false){
-    logfile.Write("[%s] recv_file failed\n", tcp_server.GetIP());
+    {
+      if (tcp_server.Read(recv_buff, tcp_args.scan_time + 10) == false) {
+        if( cnt%10 == 0){
+          logfile.Write("[%s] upload start Client heart loss\n", tcp_server.GetIP());
+        }
+        if (cnt > 20){
+          return -1;
+        }
+        cnt ++;
+        continue;
+      }
+      //  parse xml
+      std::cout << std::string {recv_buff} << "\n";
+
+      char heart_data[256]{};
+      GetXMLBuffer(recv_buff, "activate_test", heart_data, 256);
+      if (strcmp(heart_data, "alive") == 0) {
+        tcp_server.Write("<activate_test>alive</activate_test>");
+        cnt = 0;
+      } else{
+        return -1;
+      }
+    }
+    memset(recv_buff,0,sizeof (recv_buff));
+    std::cout << __LINE__ << "\n";
+    if (tcp_server.Read(recv_buff) == false) {
+      logfile.Write(  "(%s: %d) [%s] Read failed\n", __FUNCTION__, __LINE__, tcp_server.GetIP());
+      return -1;
+    }
+    file_info_parse(recv_buff, file_info);
+    char client_filename[301]{};
+    memcpy(client_filename, file_info.file_name, sizeof(client_filename));
+    UpdateStr(file_info.file_name, tcp_args.client_path, tcp_args.server_path, false);
+    if (recv_file(tcp_server.m_conn_fd, file_info) == false) {
+      logfile.Write("[%s] recv_file failed\n", tcp_server.GetIP());
+    }
+
     char send_buff[1024]{};
-    SPRINTF(send_buff,1023,"<file_name>%s</file_name><status>success</status>", file_info.file_name);
-    tcp_server.Write( send_buff);
+    SPRINTF(send_buff, 1023, "<file_name>%s</file_name><status>success</status>", client_filename);
+    if (tcp_server.Write(send_buff) == false) {
+      logfile.Write("tcp Write to [%s] failed\n", tcp_server.GetIP());
+    }
+    {
+      if (tcp_server.Read(recv_buff, tcp_args.scan_time + 10) == false) {
+        if( cnt%10 == 0){
+          logfile.Write("[%s] upload start Client heart loss\n", tcp_server.GetIP());
+        }
+        if (cnt > 20){
+          return -1;
+        }
+        cnt ++;
+        sleep(1);
+        continue;
+      }
+      //  parse xml
+      char heart_data[256]{};
+      GetXMLBuffer(recv_buff, "activate_test", heart_data, 256);
+      if (strcmp(heart_data, "alive") == 0) {
+        tcp_server.Write("<activate_test>alive</activate_test>");
+        cnt = 0;
+      }
+    }
   }
-
-
-
   return 0;
 }
 
@@ -224,7 +278,7 @@ bool file_info_parse(const char *file_info_xml, FileInfo_t &file_info) {
   GetXMLBuffer(file_info_xml, "size", &file_info.file_size);
   return true;
 }
-bool recv_file(const int sockfd, const FileInfo_t& file_info){
+bool recv_file(const int sockfd, const FileInfo_t &file_info) {
   //  1. 生成临时文件名
   char tmp_filename[256]{};
   SPRINTF(tmp_filename, 255, "%s.tmp", file_info.file_name);
@@ -251,7 +305,7 @@ bool recv_file(const int sockfd, const FileInfo_t& file_info){
     }
 
     //  读取到缓存区
-    if (Readn(sockfd, buffer, reading) == false){
+    if (Readn(sockfd, buffer, reading) == false) {
       logfile.Write("Readn failed\n");
       return false;
     }
@@ -260,8 +314,8 @@ bool recv_file(const int sockfd, const FileInfo_t& file_info){
     fwrite(buffer, 1, reading, fp);
 
     //  计算读取的总字节数
-    total_bytes+=reading;
-    if (total_bytes == file_info.file_size){
+    total_bytes += reading;
+    if (total_bytes == file_info.file_size) {
       break;
     }
   }
@@ -270,10 +324,10 @@ bool recv_file(const int sockfd, const FileInfo_t& file_info){
   fclose(fp);
 
   //  4. 重置文件时间
-  UTime(tmp_filename,file_info.m_ModifyTime);
+  UTime(tmp_filename, file_info.m_ModifyTime);
 
   //  5. 更新文件名
-  if(RENAME(tmp_filename, file_info.file_name) == false){
+  if (RENAME(tmp_filename, file_info.file_name) == false) {
     logfile.Write("RENAME [%s] ==> [%s] failed\n", tmp_filename, file_info.file_name);
     return false;
   }
