@@ -22,6 +22,15 @@ typedef struct TcpArgs {
   char proc_name[64];            // 进程名，建议用"tcp_file_server_后缀"的方式。
 } TcpArgs_t;
 
+
+//  上传/下载文件的信息
+typedef struct FileInfo {
+  char file_name[301];
+  char m_ModifyTime[21];      // 文件最后一次被修改的时间，即stat结构体的st_mtime成员。
+  int file_size;
+} FileInfo_t;
+
+
 CLogFile logfile;
 TcpArgs_t tcp_args{};
 
@@ -38,6 +47,7 @@ CTcpClient TcpClient;
 bool login(const char *argv);    // 登录业务。
 
 bool ActiveTest();    // 心跳。
+bool ActiveEnd();    // 结束心跳。
 
 char recv_buffer[1024];   // 发送报文的buffer。
 char send_buffer[1024];   // 接收报文的buffer。
@@ -45,6 +55,11 @@ char send_buffer[1024];   // 接收报文的buffer。
 // 文件上传的主函数，执行一次文件上传的任务。
 bool _tcp_put_files();
 bool b_continue = true;   // 如果调用_tcp_put_files发送了文件，b_continue为true，初始化为true。
+
+bool _tcp_get_files();
+bool recv_file(const int sockfd, const FileInfo_t &file_info);
+bool file_info_parse(const char *file_info_xml, FileInfo_t &file_info);
+
 
 // 把文件的内容发送给对端。
 bool send_file(const int sockfd, const char *filename, const int filesize);
@@ -100,8 +115,9 @@ int main(int argc, char *argv[]) {
     if (b_continue == false) {
       std::this_thread::sleep_for(std::chrono::milliseconds(tcp_args.scan_time));
 //      sleep(tcp_args.scan_time);
+      std::cout << __LINE__ <<"\n";
 
-      if (ActiveTest() == false) break;
+      if (ActiveEnd() == true) break;
     }
 
     active.UptATime();
@@ -112,16 +128,27 @@ int main(int argc, char *argv[]) {
 
 // 心跳。
 bool ActiveTest() {
-  memset(send_buffer, 0, sizeof(send_buffer));
-  memset(recv_buffer, 0, sizeof(recv_buffer));
+    if (TcpClient.Write("<activate_test>alive</activate_test>") == false) {
+      logfile.Write("[%s] Client heart send error\n");
+      return false;
+    }
+    char recv_heart[256]{};
+    if (TcpClient.Read(recv_heart, tcp_args.timeout) == false) {
+      logfile.Write("[%s] Client heart recv error\n");
+      return false;
+    }
+    if (strcmp(recv_heart, "<activate_test>alive</activate_test>") != 0) {
+      logfile.Write("[%s] Client heart recv error\n");
+      return false;
+    }
+  return true;
+}
 
-  SPRINTF(send_buffer, sizeof(send_buffer), "<activetest>ok</activetest>");
-  // logfile.Write("发送：%s\n",send_buffer);
-  if (TcpClient.Write(send_buffer) == false) return false; // 向服务端发送请求报文。
-
-  if (TcpClient.Read(recv_buffer, 20) == false) return false; // 接收服务端的回应报文。
-  // logfile.Write("接收：%s\n",recv_buffer);
-
+bool ActiveEnd(){
+  if (TcpClient.Write("<activate_test>leave</activate_test>") == false) {
+    logfile.Write("[%s] Client heart send error\n");
+    return false;
+  }
   return true;
 }
 
@@ -293,22 +320,24 @@ bool _tcp_put_files() {
 
     //  心跳
     std::cout << __LINE__ <<"\n";
-    {
-      if (TcpClient.Write("<activate_test>alive</activate_test>") == false) {
-        logfile.Write("[%s] Client heart send error\n");
-        return false;
-      }
-      char recv_heart[256]{};
-      if (TcpClient.Read(recv_heart) == false) {
-        logfile.Write("[%s] Client heart recv error\n");
-        return false;
-      }
+    if (ActiveTest() != true) return false;
 
-      if (strcmp(recv_heart, "<activate_test>alive</activate_test>") != 0) {
-        logfile.Write("[%s] Client heart recv error\n");
-        return false;
-      }
-    }
+//    {
+//      if (TcpClient.Write("<activate_test>alive</activate_test>") == false) {
+//        logfile.Write("[%s] Client heart send error\n");
+//        return false;
+//      }
+//      char recv_heart[256]{};
+//      if (TcpClient.Read(recv_heart) == false) {
+//        logfile.Write("[%s] Client heart recv error\n");
+//        return false;
+//      }
+//
+//      if (strcmp(recv_heart, "<activate_test>alive</activate_test>") != 0) {
+//        logfile.Write("[%s] Client heart recv error\n");
+//        return false;
+//      }
+//    }
 
 
     // 把文件名、修改时间、文件大小组成报文，发送给对端。
@@ -335,6 +364,7 @@ bool _tcp_put_files() {
 
     active.UptATime();
 
+    std::cout << __LINE__ <<"\n";
 
     // 接收对端的确认报文。
     while (delayed > 0) {
@@ -351,6 +381,7 @@ bool _tcp_put_files() {
       ack_message_deal_local_files(recv_buffer);
 
     }
+    std::cout << __LINE__ <<"\n";
 
 
     // 继续接收对端的确认报文。
@@ -364,22 +395,25 @@ bool _tcp_put_files() {
       ack_message_deal_local_files(recv_buffer);
     }
     //
-    {
-      if (TcpClient.Write("<activate_test>alive</activate_test>") == false) {
-        logfile.Write("[%s] Client heart send error\n");
-        return false;
-      }
-      char recv_heart[256]{};
-      if (TcpClient.Read(recv_heart) == false) {
-        logfile.Write("[%s] Client heart recv error\n");
-        return false;
-      }
+//    {
+//      if (TcpClient.Write("<activate_test>alive</activate_test>") == false) {
+//        logfile.Write("[%s] Client heart send error\n");
+//        return false;
+//      }
+//      char recv_heart[256]{};
+//      if (TcpClient.Read(recv_heart) == false) {
+//        logfile.Write("[%s] Client heart recv error\n");
+//        return false;
+//      }
+//
+//      if (strcmp(recv_heart, "<activate_test>alive</activate_test>") != 0) {
+//        logfile.Write("[%s] Client heart recv error\n");
+//        return false;
+//      }
+//    }
+    if (ActiveTest() != true) return false;
+    std::cout << __LINE__ <<"\n";
 
-      if (strcmp(recv_heart, "<activate_test>alive</activate_test>") != 0) {
-        logfile.Write("[%s] Client heart recv error\n");
-        return false;
-      }
-    }
   }
   return true;
 }
@@ -462,4 +496,155 @@ bool ack_message_deal_local_files(const char *recv_buffer) {
 
   return true;
 }
+bool _tcp_get_files() {
+  //  1. 发送请求
+//  1. 接收文件信息 文件名 大小... ==> 解析  ==> 修改上传路径为本地路径
+  //  2. 读取文件到缓冲区
+  //  3. 保存文件 ==> 更新临时文件
+  //  4. 发送应答给client
+  //  5. 加入心跳报文 超时断开 客户端先发送 在文件发送前校验一次 发送完毕校验一次
 
+  active.AddPInfo(tcp_args.timeout, tcp_args.proc_name);
+
+  char recv_buff[1024]{};
+  FileInfo_t file_info{};
+  int cnt = 0;
+  while (true) {
+    memset(recv_buff, 0, sizeof(recv_buff));
+    memset(&file_info, 0, sizeof(file_info));
+    active.UptATime();
+    {
+      if (TcpClient.Read(recv_buff, tcp_args.scan_time + 10) == false) {
+        if (cnt % 10 == 0) {
+          logfile.Write("[%s] upload start Client heart loss\n", TcpClient.m_ip);
+        }
+        if (cnt > 20) {
+          return -1;
+        }
+        cnt++;
+        continue;
+      }
+      //  parse xml
+      std::cout << std::string{recv_buff} << "\n";
+
+      char heart_data[256]{};
+      GetXMLBuffer(recv_buff, "activate_test", heart_data, 256);
+      if (strcmp(heart_data, "alive") == 0) {
+        TcpClient.Write("<activate_test>alive</activate_test>");
+        cnt = 0;
+      } else {
+        return -1;
+      }
+    }
+    memset(recv_buff, 0, sizeof(recv_buff));
+    std::cout << __LINE__ << "\n";
+    if (TcpClient.Read(recv_buff) == false) {
+      logfile.Write("(%s: %d) [%s] Read failed\n", __FUNCTION__, __LINE__, TcpClient.m_ip);
+      return -1;
+    }
+    file_info_parse(recv_buff, file_info);
+    char client_filename[301]{};
+    memcpy(client_filename, file_info.file_name, sizeof(client_filename));
+    UpdateStr(file_info.file_name, tcp_args.client_path, tcp_args.server_path, false);
+    if (recv_file(TcpClient.m_conn_fd, file_info) == false) {
+      logfile.Write("[%s] recv_file failed\n", TcpClient.m_ip);
+    }
+
+    char send_buff[1024]{};
+    SPRINTF(send_buff, 1023, "<file_name>%s</file_name><status>success</status>", client_filename);
+    if (TcpClient.Write(send_buff) == false) {
+      logfile.Write("tcp Write to [%s] failed\n", TcpClient.m_ip);
+    }
+    {
+      if (TcpClient.Read(recv_buff, tcp_args.scan_time + 10) == false) {
+        if (cnt % 10 == 0) {
+          logfile.Write("[%s] upload start Client heart loss\n", TcpClient.m_ip);
+        }
+        if (cnt > 20) {
+          return -1;
+        }
+        cnt++;
+        sleep(1);
+        continue;
+      }
+      //  parse xml
+      char heart_data[256]{};
+      GetXMLBuffer(recv_buff, "activate_test", heart_data, 256);
+      if (strcmp(heart_data, "alive") == 0) {
+        TcpClient.Write("<activate_test>alive</activate_test>");
+        cnt = 0;
+      }
+    }
+    active.UptATime();
+
+  }
+  return 0;
+
+  return false;
+}
+
+bool recv_file(const int sockfd, const FileInfo_t &file_info) {
+  //  1. 生成临时文件名
+  char tmp_filename[256]{};
+  SPRINTF(tmp_filename, 255, "%s.tmp", file_info.file_name);
+
+  //  2. 循环接收
+  int total_bytes = 0;    // 已接收的字节总数。
+  int reading = 0;        //本次打算读取的字节数。
+  char buffer[1000];    // 存放读取数据的buffer。
+
+  active.UptATime();
+
+  //  打开临时文件
+  FILE *fp = nullptr;
+  if ((fp = fopen(tmp_filename, "w")) == nullptr) {
+    logfile.Write("fopen %s failed\n", tmp_filename);
+    return false;
+  }
+
+  while (true) {
+    memset(buffer, 0, sizeof(buffer));
+    //  计算本次读取的字节数
+    if (file_info.file_size - total_bytes > 1000) {
+      reading = 1000;
+    } else {
+      reading = file_info.file_size - total_bytes;
+    }
+
+    //  读取到缓存区
+    if (Readn(sockfd, buffer, reading) == false) {
+      logfile.Write("Readn failed\n");
+      return false;
+    }
+
+    //  写到文件里
+    fwrite(buffer, 1, reading, fp);
+
+    //  计算读取的总字节数
+    total_bytes += reading;
+    if (total_bytes == file_info.file_size) {
+      break;
+    }
+  }
+
+  //  3. 关闭fd
+  fclose(fp);
+
+  //  4. 重置文件时间
+  UTime(tmp_filename, file_info.m_ModifyTime);
+
+  //  5. 更新文件名
+  if (RENAME(tmp_filename, file_info.file_name) == false) {
+    logfile.Write("RENAME [%s] ==> [%s] failed\n", tmp_filename, file_info.file_name);
+    return false;
+  }
+
+  return true;
+}
+
+bool file_info_parse(const char *file_info_xml, FileInfo_t &file_info) {
+  GetXMLBuffer(file_info_xml, "filename", file_info.file_name, 300);
+  GetXMLBuffer(file_info_xml, "mtime", file_info.m_ModifyTime, 21);
+  GetXMLBuffer(file_info_xml, "size", &file_info.file_size);
+  return true;
+}

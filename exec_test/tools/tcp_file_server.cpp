@@ -37,8 +37,12 @@ bool xml_parse(const char *xml_buffer);
 int upload_proc();
 bool file_info_parse(const char *file_info_xml, FileInfo_t &file_info);
 bool recv_file(const int sockfd, const FileInfo_t &file_info);
+bool ack_message_deal_local_files(const char *recv_buffer);
+
 //  下载业务函数
-int download_proc();
+bool download_proc();
+// 把文件的内容发送给对端。
+bool send_file(const int sockfd, const char *filename, const int filesize);
 
 //  父进程信号处理函数
 void Father_EXIT(int sig);
@@ -48,12 +52,18 @@ void Child_EXIT(int signal);
 //  登陆信息
 bool check_login();
 
+
+
 ///////////////////////////////
+bool b_continue;
 CLogFile logfile;
 CTcpServer tcp_server;
 TcpArgs_t tcp_args{};
+CPActive active;  //  进程心跳
 ///////////////////////////////
 
+//  tcp心跳
+bool ActiveTest();
 
 int main(int argc, char *argv[]) {
   //  忽略信号
@@ -157,7 +167,7 @@ bool check_login() {
   //  2. 解析到tcp_args中
   char recv_buff[1024]{};
   if (tcp_server.Read(recv_buff, 20) == false) {
-    logfile.Write(  "(%s: %d) [%s] Read failed\n", __FUNCTION__, __LINE__, tcp_server.GetIP());
+    logfile.Write("(%s: %d) [%s] Read failed\n", __FUNCTION__, __LINE__, tcp_server.GetIP());
     return false;
   }
   logfile.Write("[%s] Read: %s", tcp_server.GetIP(), recv_buff);
@@ -195,40 +205,43 @@ int upload_proc() {
   //  3. 保存文件 ==> 更新临时文件
   //  4. 发送应答给client
   //  5. 加入心跳报文 超时断开 客户端先发送 在文件发送前校验一次 发送完毕校验一次
+
+  active.AddPInfo(tcp_args.timeout, tcp_args.proc_name);
+
   char recv_buff[1024]{};
   FileInfo_t file_info{};
   int cnt = 0;
   while (true) {
-    memset(recv_buff,0,sizeof (recv_buff));
-    memset(&file_info,0,sizeof (file_info));
-
+    memset(recv_buff, 0, sizeof(recv_buff));
+    memset(&file_info, 0, sizeof(file_info));
+    active.UptATime();
     {
       if (tcp_server.Read(recv_buff, tcp_args.scan_time + 10) == false) {
-        if( cnt%10 == 0){
+        if (cnt % 10 == 0) {
           logfile.Write("[%s] upload start Client heart loss\n", tcp_server.GetIP());
         }
-        if (cnt > 20){
+        if (cnt > 20) {
           return -1;
         }
-        cnt ++;
+        cnt++;
         continue;
       }
       //  parse xml
-      std::cout << std::string {recv_buff} << "\n";
+      std::cout << std::string{recv_buff} << "\n";
 
       char heart_data[256]{};
       GetXMLBuffer(recv_buff, "activate_test", heart_data, 256);
       if (strcmp(heart_data, "alive") == 0) {
         tcp_server.Write("<activate_test>alive</activate_test>");
         cnt = 0;
-      } else{
+      } else {
         return -1;
       }
     }
-    memset(recv_buff,0,sizeof (recv_buff));
+    memset(recv_buff, 0, sizeof(recv_buff));
     std::cout << __LINE__ << "\n";
     if (tcp_server.Read(recv_buff) == false) {
-      logfile.Write(  "(%s: %d) [%s] Read failed\n", __FUNCTION__, __LINE__, tcp_server.GetIP());
+      logfile.Write("(%s: %d) [%s] Read failed\n", __FUNCTION__, __LINE__, tcp_server.GetIP());
       return -1;
     }
     file_info_parse(recv_buff, file_info);
@@ -246,13 +259,13 @@ int upload_proc() {
     }
     {
       if (tcp_server.Read(recv_buff, tcp_args.scan_time + 10) == false) {
-        if( cnt%10 == 0){
+        if (cnt % 10 == 0) {
           logfile.Write("[%s] upload start Client heart loss\n", tcp_server.GetIP());
         }
-        if (cnt > 20){
+        if (cnt > 20) {
           return -1;
         }
-        cnt ++;
+        cnt++;
         sleep(1);
         continue;
       }
@@ -264,12 +277,97 @@ int upload_proc() {
         cnt = 0;
       }
     }
+    active.UptATime();
+
   }
   return 0;
 }
 
-int download_proc() {
-  return 0;
+bool download_proc() {
+  CDir Dir;
+
+  // 调用OpenDir()打开tcp_args.client_path目录。
+  if (Dir.OpenDir(tcp_args.server_path, tcp_args.match_rule, 10000, tcp_args.bool_upload_sub_path) == false) {
+    logfile.Write("Dir.OpenDir(%s) 失败。\n", tcp_args.server_path);
+    return false;
+  }
+
+  int delayed = 0;        // 未收到对端确认报文的文件数量。
+  int buff_len = 0;         // 用于存放recv_buffer的长度。
+
+  b_continue = false;
+
+  char send_buffer[1024]{};
+  char recv_buffer[1024]{};
+
+  while (true) {
+    memset(send_buffer, 0, sizeof(send_buffer));
+    memset(recv_buffer, 0, sizeof(recv_buffer));
+
+    // 遍历目录中的每个文件，调用ReadDir()获取一个文件名。
+    if (Dir.ReadDir() == false) break;
+
+    b_continue = true;
+
+    // 把文件名、修改时间、文件大小组成报文，发送给对端。
+    SNPRINTF(send_buffer, sizeof(send_buffer), 1000,
+             "<filename>%s</filename><mtime>%s</mtime><size>%d</size>",
+             Dir.m_FullFileName, Dir.m_ModifyTime, Dir.m_FileSize);
+
+    // logfile.Write("send_buffer=%s\n",send_buffer);
+    if (tcp_server.Write(send_buffer) == false) {
+      logfile.Write("TcpClient.Write() failed.\n");
+      return false;
+    }
+
+    // 把文件的内容发送给对端。
+    logfile.Write("send %s(%d) ...", Dir.m_FullFileName, Dir.m_FileSize);
+    if (send_file(tcp_server.m_conn_fd, Dir.m_FullFileName, Dir.m_FileSize) == true) {
+      logfile.WriteEx("ok.\n");
+      delayed ++;
+    } else {
+      logfile.WriteEx("failed.\n");
+      return false;
+    }
+
+    active.UptATime();
+
+    std::cout << __LINE__ <<"\n";
+
+    // 接收对端的确认报文。
+    while (delayed > 0) {
+      memset(recv_buffer, 0, sizeof(recv_buffer));
+
+      if (TcpRead(tcp_server.m_conn_fd, recv_buffer, &buff_len, -1) == false) {
+        break;
+      }
+      //  TODO  解析应答
+//       logfile.Write("recv_buffer=%s\n",recv_buffer);
+
+      // 删除或者转存本地的文件。
+      delayed--;
+      ack_message_deal_local_files(recv_buffer);
+
+    }
+    std::cout << __LINE__ <<"\n";
+
+
+    // 继续接收对端的确认报文。
+    while (delayed > 0) {
+      memset(recv_buffer, 0, sizeof(recv_buffer));
+      if (TcpRead(tcp_server.m_conn_fd, recv_buffer, &buff_len, 10) == false) break;
+      // logfile.Write("recv_buffer=%s\n",recv_buffer);
+
+      // 删除或者转存本地的文件。
+      delayed--;
+      ack_message_deal_local_files(recv_buffer);
+    }
+
+    if (ActiveTest() != true) return false;
+    std::cout << __LINE__ <<"\n";
+
+  }
+  return true;
 }
 
 bool file_info_parse(const char *file_info_xml, FileInfo_t &file_info) {
@@ -287,6 +385,8 @@ bool recv_file(const int sockfd, const FileInfo_t &file_info) {
   int total_bytes = 0;    // 已接收的字节总数。
   int reading = 0;        //本次打算读取的字节数。
   char buffer[1000];    // 存放读取数据的buffer。
+
+  active.UptATime();
 
   //  打开临时文件
   FILE *fp = nullptr;
@@ -330,6 +430,84 @@ bool recv_file(const int sockfd, const FileInfo_t &file_info) {
   if (RENAME(tmp_filename, file_info.file_name) == false) {
     logfile.Write("RENAME [%s] ==> [%s] failed\n", tmp_filename, file_info.file_name);
     return false;
+  }
+
+  return true;
+}
+// 把文件的内容发送给对端。
+bool send_file(const int sockfd, const char *filename, const int filesize) {
+  int reading = 0;        // 每次调用fread时打算读取的字节数。
+  int bytes = 0;         // 调用一次fread从文件中读取的字节数。
+  char buffer[1000];    // 存放读取数据的buffer。
+  int totalbytes = 0;    // 从文件中已读取的字节总数。
+  FILE *fp = NULL;
+
+  // 以"rb"的模式打开文件。
+  if ((fp = fopen(filename, "rb")) == NULL) return false;
+
+  while (true) {
+    memset(buffer, 0, sizeof(buffer));
+
+    // 计算本次应该读取的字节数，如果剩余的数据超过1000字节，就打算读1000字节。
+    if (filesize - totalbytes > 1000) reading = 1000;
+    else reading = filesize - totalbytes;
+
+    // 从文件中读取数据。
+    bytes = fread(buffer, 1, reading, fp);
+
+    // 把读取到的数据发送给对端。
+    if (bytes > 0) {
+      if (Writen(sockfd, buffer, bytes) == false) {
+        fclose(fp);
+        return false;
+      }
+    }
+
+    // 计算文件已读取的字节总数，如果文件已读完，跳出循环。
+    totalbytes = totalbytes + bytes;
+
+    if (totalbytes == filesize) break;
+  }
+
+  fclose(fp);
+
+  return true;
+}
+
+// 删除或者转存本地的文件。
+bool ack_message_deal_local_files(const char *recv_buffer) {
+  char filename[256];
+  char result[16];
+
+  memset(filename, 0, sizeof(filename));
+  memset(result, 0, sizeof(result));
+
+  GetXMLBuffer(recv_buffer, "file_name", filename, 255);
+  GetXMLBuffer(recv_buffer, "status", result, 15);
+
+  // 如果服务端接收文件不成功，直接返回。
+  if (strcmp(result, "success") != 0) return true;
+
+  // proc_type==1，删除文件。
+  if (tcp_args.proc_type == 1) {
+    if (REMOVE(filename) == false) {
+      logfile.Write("REMOVE(%s) failed.\n", filename);
+      return false;
+    }
+  }
+
+  // proc_type==2，移动到备份目录。
+  if (tcp_args.proc_type == 2) {
+    // 生成转存后的备份目录文件名。
+    char backup_filename[256];
+    STRCPY(backup_filename, sizeof(backup_filename), filename);
+    UpdateStr(backup_filename, tcp_args.client_path, tcp_args.client_path_backup, false);
+    if (RENAME(filename, backup_filename) == false) {
+      logfile.Write("RENAME(%s,%s) failed.\n",
+                    filename,
+                    backup_filename);
+      return false;
+    }
   }
 
   return true;
