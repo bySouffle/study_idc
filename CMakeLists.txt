@@ -10,6 +10,7 @@ add_subdirectory(googletest-1.10.x)
 add_subdirectory(function_units/public)
 add_subdirectory(function_units/json)
 add_subdirectory(function_units/ftp)
+add_subdirectory(function_units/db)
 
 
 add_subdirectory(exec_test)
@@ -24,5 +25,6 @@ add_executable(study_idc main.cpp )
 target_link_libraries(study_idc public_lib)
 target_link_libraries(study_idc json_lib)
 target_link_libraries(study_idc ftp_lib)
+target_link_libraries(study_idc mysql_lib)
 
 add_subdirectory(FunctionTests)

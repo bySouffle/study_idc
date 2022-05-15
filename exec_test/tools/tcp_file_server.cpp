@@ -363,7 +363,6 @@ bool download_proc() {
       ack_message_deal_local_files(recv_buffer);
     }
 
-    if (ActiveTest() != true) return false;
     std::cout << __LINE__ <<"\n";
 
   }

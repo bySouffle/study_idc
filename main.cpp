@@ -2,6 +2,7 @@
 #include "json/st_station_data.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "db/_mysql.h"
 
 CPActive active_;  //  进程心跳
 
@@ -52,7 +53,7 @@ bool save_station_data(const char *out_path,const char *data_fmt);
 void EXIT(int signal);
 
 int main(int argc, char *argv[]) {
-
+  connection con;
   std::cout << "Hello, World!" << std::endl;
   if ((argc != 5) && (argc != 6)) {
     // 如果参数非法，给出帮助文档。
