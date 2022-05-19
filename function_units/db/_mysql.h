@@ -50,7 +50,7 @@ typedef struct CdaDef
 }CdaDef_t;
 
 //! MySQL数据库连接类
-class connection
+class Connection
 {
  private:
   //! 设置数据库参数
@@ -73,8 +73,8 @@ class connection
 
   char m_sql[10241];   // SQL语句的文本，最长不能超过10240字节。
 
-  connection();        // 构造函数。
-  ~connection();        // 析构函数。
+  Connection();        // 构造函数。
+  ~Connection();        // 析构函数。
 
   //! 登录数据库
   //! \param conn_str             数据库的登录参数,格式:"ip,username,password,dbname,port"
@@ -136,7 +136,7 @@ class SqlStatement
 
   CdaDef m_cda1;      // prepare() SQL语句的结果。
 
-  connection *m_conn;  // 数据库连接指针。
+  Connection *m_conn;  // 数据库连接指针。
   int m_sql_type;       // SQL语句的类型，0-查询语句；1-非查询语句。
   int m_auto_commit_opt; // 自动提交标志，0-关闭；1-开启。
   void err_report();   // 错误报告。
@@ -149,7 +149,7 @@ class SqlStatement
   CdaDef m_cda;       // 执行SQL语句的结果。
 
   SqlStatement();      // 构造函数。
-  SqlStatement(connection *conn);    // 构造函数，同时绑定数据库连接。
+  SqlStatement(Connection *conn);    // 构造函数，同时绑定数据库连接。
 
   ~SqlStatement();      // 析构函数。
 
@@ -158,7 +158,7 @@ class SqlStatement
   //! \return     0-成功，其它失败，只要conn参数是有效的，并且数据库的游标资源足够，connect方法不会返回失败.
   //!             程序中一般不必关心connect方法的返回值
   //! \note       每个SqlStatement只需要绑定一次，在绑定新的connection前，必须先调用disconnect方法
-  int connect(connection *conn);
+  int connect(Connection *conn);
 
   //! 取消与数据库连接的绑定
   //! \return 返回值：0-成功，其它失败，程序中一般不必关心返回值

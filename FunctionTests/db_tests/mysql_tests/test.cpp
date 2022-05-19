@@ -21,7 +21,7 @@ TEST(buff_to_file, test) {
 
 TEST(create_table, test) {
 //  $ docker run --name z-mysql -p 3306:3306  -e MYSQL_ROOT_PASSWORD=2020 -d mysql:latest
-  connection conn;
+  Connection conn;
   if (conn.connect_to_db("172.20.92.218,root,2020,mysql,3306", "utf8") != 0) {
     printf("connect database failed.\n%s\n", conn.m_cda.message);
   }
@@ -54,7 +54,7 @@ TEST(create_table, test) {
 }
 
 TEST(inset_table, test) {
-  connection conn;
+  Connection conn;
   if (conn.connect_to_db("172.20.92.218,root,2020,mysql,3306", "utf8") != 0) {
     printf("connect database failed.\n%s\n", conn.m_cda.message);
   }
@@ -112,7 +112,7 @@ TEST(inset_table, test) {
 }
 
 TEST(delete_table, test) {
-  connection conn;
+  Connection conn;
   if (conn.connect_to_db("172.20.92.218,root,2020,mysql,3306", "utf8") != 0) {
     printf("connect database failed.\n%s\n", conn.m_cda.message);
   }
@@ -142,7 +142,7 @@ TEST(delete_table, test) {
 }
 
 TEST(update_table, test) {
-  connection conn;
+  Connection conn;
   if (conn.connect_to_db("172.20.92.218,root,2020,mysql,3306", "utf8") != 0) {
     printf("connect database failed.\n%s\n", conn.m_cda.message);
   }
@@ -187,7 +187,7 @@ TEST(update_table, test) {
 }
 
 TEST(search_table, test) {
-  connection conn;
+  Connection conn;
   if (conn.connect_to_db("172.20.92.218,root,2020,mysql,3306", "utf8") != 0) {
     printf("connect database failed.\n%s\n", conn.m_cda.message);
   }

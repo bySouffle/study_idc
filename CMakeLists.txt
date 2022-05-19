@@ -20,6 +20,8 @@ include_directories(ini)
 include_directories(sql)
 include_directories(function_units)
 include_directories(function_units/rapidjson)
+include_directories(function_units/db)
+
 
 add_executable(study_idc main.cpp )
 target_link_libraries(study_idc public_lib)

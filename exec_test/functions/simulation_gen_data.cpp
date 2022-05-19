@@ -1,3 +1,7 @@
+//
+// Created by bysou on 2022/5/19.
+//
+
 #include "public/_public.h"
 #include "json/st_station_data.h"
 #include "rapidjson/stringbuffer.h"
@@ -77,7 +81,7 @@ int main(int argc, char *argv[]) {
   // 但请不要用 "kill -9 +进程号" 强行终止。
   signal(SIGINT, EXIT);
   signal(SIGTERM, EXIT);
-  
+
   // 打开程序的日志文件。
   if (logfile_.Open(argv[3], "a+", false) == false) {
     printf("logfile_.Open(%s) failed.\n", argv[3]);
@@ -86,7 +90,7 @@ int main(int argc, char *argv[]) {
   logfile_.Write("study_idc 开始运行。\n");
 
   active_.AddPInfo(20, "study_idc"); //  添加心跳信息到SHM
-  
+
   // 把站点参数文件中加载到vec_station_code容器中。
   if (LoadSTCode(argv[1]) == false) return -1;
 
@@ -97,7 +101,7 @@ int main(int argc, char *argv[]) {
   }else {
     STRCPY(str_date_time, sizeof (str_date_time), argv[5]);
   }
-  
+
   // 模拟生成站点分钟观测数据。
   simulation_gen_data();
 
@@ -148,12 +152,12 @@ bool LoadSTCode(const char *ini_file) {
 
   for (auto & it : vec_station_code){\
     logfile_.Write("provname=%s,obtid=%s,obtname=%s,lat=%.2f,lon=%.2f,height=%.2f\n",
-                  it.province_name,
-                  it.obt_id,
-                  it.obt_name,
-                  it.lat,
-                  it.lon,
-                  it.height);
+                   it.province_name,
+                   it.obt_id,
+                   it.obt_name,
+                   it.lat,
+                   it.lon,
+                   it.height);
   }
 
   return true;
@@ -188,15 +192,15 @@ void simulation_gen_data() {
   //  写入日志文件
   for (auto & it : vec_station_data){
     logfile_.Write("obt_id=%s,date_time=%s,t=%d,p=%d,u=%d,wd=%d,wf=%d,r=%d,vis=%d\n",
-                  it.obt_id,
-                  it.date_time,
-                  it.t,
-                  it.p,
-                  it.u,
-                  it.wd,
-                  it.wf,
-                  it.r,
-                  it.vis);
+                   it.obt_id,
+                   it.date_time,
+                   it.t,
+                   it.p,
+                   it.u,
+                   it.wd,
+                   it.wf,
+                   it.r,
+                   it.vis);
   }
 
 }
@@ -256,15 +260,15 @@ bool save_station_data(const char *out_path, const char *data_fmt) {
     }
     if(strcmp(data_fmt, "json") == 0){
       CStationData data(
-                   it.obt_id,
-                   it.date_time,
-                   it.t,
-                   it.p,
-                   it.u,
-                   it.wd,
-                   it.wf,
-                   it.r,
-                   it.vis);
+          it.obt_id,
+          it.date_time,
+          it.t,
+          it.p,
+          it.u,
+          it.wd,
+          it.wf,
+          it.r,
+          it.vis);
       JsonWriter writer;
       writer & data;
 
@@ -278,7 +282,7 @@ bool save_station_data(const char *out_path, const char *data_fmt) {
 
     }
 
-    }
+  }
   if (strcmp(data_fmt,"xml")== 0) file_.Fprintf("</data>\n");
   if (strcmp(data_fmt,"json")==0) {}
 

@@ -4,7 +4,7 @@
 
 #include "_mysql.h"
 
-connection::connection()
+Connection::Connection()
 {
   m_conn = nullptr;
 
@@ -22,12 +22,12 @@ connection::connection()
   strcpy(m_dbtype,"mysql");
 }
 
-connection::~connection()
+Connection::~Connection()
 {
   disconnect();
 }
 
-void connection::set_db_opt(char *conn_str)
+void Connection::set_db_opt(char *conn_str)
 {
   memset(&m_env,0,sizeof(MysqlLoginENV));
 
@@ -74,7 +74,7 @@ void connection::set_db_opt(char *conn_str)
   m_env.port=atoi(epos+1);
 }
 
-int connection::connect_to_db(char *conn_str, char *charset, unsigned int auto_commit_opt)
+int Connection::connect_to_db(char *conn_str, char *charset, unsigned int auto_commit_opt)
 {
   // 如果已连接上数据库，就不再连接。
   // 所以，如果想重连数据库，必须显示的调用disconnect()方法后才能重连。
@@ -115,7 +115,7 @@ int connection::connect_to_db(char *conn_str, char *charset, unsigned int auto_c
 }
 
 // 设置字符集，要与数据库的一致，否则中文会出现乱码
-void connection::character(char *charset)
+void Connection::character(char *charset)
 {
   if (charset==0) return;
 
@@ -124,7 +124,7 @@ void connection::character(char *charset)
   return;
 }
 
-int connection::disconnect()
+int Connection::disconnect()
 {
   memset(&m_cda,0,sizeof(m_cda));
 
@@ -144,7 +144,7 @@ int connection::disconnect()
   return 0;
 }
 
-int connection::rollback()
+int Connection::rollback()
 {
   memset(&m_cda,0,sizeof(m_cda));
 
@@ -161,7 +161,7 @@ int connection::rollback()
   return 0;
 }
 
-int connection::commit()
+int Connection::commit()
 {
   memset(&m_cda,0,sizeof(m_cda));
 
@@ -178,7 +178,7 @@ int connection::commit()
   return 0;
 }
 
-void connection::err_report()
+void Connection::err_report()
 {
   if (m_state == 0)
   {
@@ -213,10 +213,10 @@ void SqlStatement::initial()
   memset(m_sql,0,sizeof(m_sql));
 
   m_cda.rc=-1;
-  strncpy(m_cda.message,"SqlStatement not connect to connection.\n",128);
+  strncpy(m_cda.message,"SqlStatement not connect to Connection.\n",128);
 }
 
-SqlStatement::SqlStatement(connection *conn)
+SqlStatement::SqlStatement(Connection *conn)
 {
   initial();
 
@@ -228,7 +228,7 @@ SqlStatement::~SqlStatement()
   disconnect();
 }
 
-int SqlStatement::connect(connection *conn)
+int SqlStatement::connect(Connection *conn)
 {
   // 注意，一个SqlStatement在程序中只能绑定一个connection，不允许绑定多个connection。
   // 所以，只要这个SqlStatement已绑定connection，直接返回成功。
@@ -284,7 +284,7 @@ int SqlStatement::disconnect()
   return 0;
 }
 
-int connection::execute(const char *fmt,...)
+int Connection::execute(const char *fmt, ...)
 {
   memset(m_sql,0,sizeof(m_sql));
 

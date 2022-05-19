@@ -29,3 +29,4 @@ endforeach()
 
 add_subdirectory(tools)
 add_subdirectory(socket_tests)
+add_subdirectory(functions)
